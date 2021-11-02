@@ -35,8 +35,8 @@ import org.wso2.lsp4intellij.client.languageserver.serverdefinition.LanguageServ
 import org.wso2.lsp4intellij.contributors.icon.LSPDefaultIconProvider;
 import org.wso2.lsp4intellij.contributors.icon.LSPIconProvider;
 import org.wso2.lsp4intellij.contributors.label.LSPDefaultLabelProvider;
-import org.wso2.lsp4intellij.extensions.LSPExtensionManager;
 import org.wso2.lsp4intellij.contributors.label.LSPLabelProvider;
+import org.wso2.lsp4intellij.extensions.LSPExtensionManager;
 
 import javax.swing.*;
 import javax.swing.event.HyperlinkEvent;

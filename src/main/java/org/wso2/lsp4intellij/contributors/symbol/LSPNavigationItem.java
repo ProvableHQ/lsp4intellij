@@ -33,10 +33,10 @@ import java.util.Objects;
  */
 public class LSPNavigationItem extends OpenFileDescriptor implements NavigationItem {
 
-    private ItemPresentation presentation;
+    private final ItemPresentation presentation;
 
     LSPNavigationItem(String name, String location, Icon icon, @NotNull Project project, @NotNull VirtualFile file,
-            int logicalLine, int logicalColumn) {
+                      int logicalLine, int logicalColumn) {
         super(project, file, logicalLine, logicalColumn);
         presentation = new LSPItemPresentation(location, name, icon);
     }
@@ -55,7 +55,7 @@ public class LSPNavigationItem extends OpenFileDescriptor implements NavigationI
 
     @Override
     public boolean equals(Object obj) {
-        if(obj instanceof LSPNavigationItem) {
+        if (obj instanceof LSPNavigationItem) {
             LSPNavigationItem other = (LSPNavigationItem) obj;
             return this.getLine() == other.getLine() && this.getColumn() == other.getColumn() &&
                     Objects.equals(this.getName(), other.getName());
@@ -70,9 +70,9 @@ public class LSPNavigationItem extends OpenFileDescriptor implements NavigationI
 
     private class LSPItemPresentation implements ItemPresentation {
 
-        private String location;
-        private String presentableText;
-        private Icon icon;
+        private final String location;
+        private final String presentableText;
+        private final Icon icon;
 
         LSPItemPresentation(String location, String presentableText, Icon icon) {
             this.location = location;

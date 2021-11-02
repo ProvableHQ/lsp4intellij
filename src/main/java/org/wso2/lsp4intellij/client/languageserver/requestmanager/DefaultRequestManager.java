@@ -34,15 +34,15 @@ import java.util.concurrent.CompletableFuture;
  */
 public class DefaultRequestManager implements RequestManager {
 
-    private Logger LOG = Logger.getInstance(DefaultRequestManager.class);
+    private final Logger LOG = Logger.getInstance(DefaultRequestManager.class);
 
-    private LanguageServerWrapper wrapper;
-    private LanguageServer server;
-    private LanguageClient client;
-    private ServerCapabilities serverCapabilities;
-    private TextDocumentSyncOptions textDocumentOptions;
-    private WorkspaceService workspaceService;
-    private TextDocumentService textDocumentService;
+    private final LanguageServerWrapper wrapper;
+    private final LanguageServer server;
+    private final LanguageClient client;
+    private final ServerCapabilities serverCapabilities;
+    private final TextDocumentSyncOptions textDocumentOptions;
+    private final WorkspaceService workspaceService;
+    private final TextDocumentService textDocumentService;
 
     public DefaultRequestManager(LanguageServerWrapper wrapper, LanguageServer server, LanguageClient client,
                                  ServerCapabilities serverCapabilities) {
@@ -113,11 +113,6 @@ public class DefaultRequestManager implements RequestManager {
     @Override
     public void publishDiagnostics(PublishDiagnosticsParams publishDiagnosticsParams) {
         client.publishDiagnostics(publishDiagnosticsParams);
-    }
-
-    @Override
-    public void semanticHighlighting(SemanticHighlightingParams params) {
-        client.semanticHighlighting(params);
     }
 
     // Server
@@ -225,7 +220,8 @@ public class DefaultRequestManager implements RequestManager {
     public CompletableFuture<List<? extends SymbolInformation>> symbol(WorkspaceSymbolParams params) {
         if (checkStatus()) {
             try {
-                return serverCapabilities.getWorkspaceSymbolProvider() ? workspaceService.symbol(params) : null;
+                Either<Boolean, WorkspaceSymbolOptions> provider = serverCapabilities.getWorkspaceSymbolProvider();
+                return provider.isLeft() || provider.isRight() ? workspaceService.symbol(params) : null;
             } catch (Exception e) {
                 crashed(e);
                 return null;
@@ -344,8 +340,8 @@ public class DefaultRequestManager implements RequestManager {
         if (checkStatus()) {
             try {
                 return (Optional.ofNullable(serverCapabilities.getCompletionProvider())
-                    .map(x -> x.getResolveProvider()).orElse(false)) ?
-                    textDocumentService.resolveCompletionItem(unresolved) : null;
+                        .map(x -> x.getResolveProvider()).orElse(false)) ?
+                        textDocumentService.resolveCompletionItem(unresolved) : null;
             } catch (Exception e) {
                 crashed(e);
                 return null;
@@ -363,10 +359,9 @@ public class DefaultRequestManager implements RequestManager {
     public CompletableFuture<Hover> hover(HoverParams params) {
         if (checkStatus()) {
             try {
-                return (
-                    Optional.ofNullable(serverCapabilities.getHoverProvider()).orElse(false)) ?
+                Either<Boolean, HoverOptions> provider = serverCapabilities.getHoverProvider();
+                return provider.isLeft() || provider.isRight() ?
                         textDocumentService.hover(params) : null;
-               
             } catch (Exception e) {
                 crashed(e);
                 return null;
@@ -397,7 +392,8 @@ public class DefaultRequestManager implements RequestManager {
     public CompletableFuture<List<? extends Location>> references(ReferenceParams params) {
         if (checkStatus()) {
             try {
-                return (serverCapabilities.getReferencesProvider()) ? textDocumentService.references(params) : null;
+                Either<Boolean, ReferenceOptions> provider = serverCapabilities.getReferencesProvider();
+                return provider.isLeft() || provider.isRight() ? textDocumentService.references(params) : null;
             } catch (Exception e) {
                 crashed(e);
                 return null;
@@ -415,7 +411,8 @@ public class DefaultRequestManager implements RequestManager {
     public CompletableFuture<List<? extends DocumentHighlight>> documentHighlight(DocumentHighlightParams params) {
         if (checkStatus()) {
             try {
-                return (serverCapabilities.getDocumentHighlightProvider()) ? textDocumentService.documentHighlight(params) : null;
+                Either<Boolean, DocumentHighlightOptions> provider = serverCapabilities.getDocumentHighlightProvider();
+                return provider.isLeft() || provider.isRight() ? textDocumentService.documentHighlight(params) : null;
             } catch (Exception e) {
                 crashed(e);
                 return null;
@@ -428,7 +425,8 @@ public class DefaultRequestManager implements RequestManager {
     public CompletableFuture<List<Either<SymbolInformation, DocumentSymbol>>> documentSymbol(DocumentSymbolParams params) {
         if (checkStatus()) {
             try {
-                return (serverCapabilities.getDocumentSymbolProvider()) ? textDocumentService.documentSymbol(params) : null;
+                Either<Boolean, DocumentSymbolOptions> provider = serverCapabilities.getDocumentSymbolProvider();
+                return provider.isLeft() || provider.isRight() ? textDocumentService.documentSymbol(params) : null;
             } catch (Exception e) {
                 crashed(e);
                 return null;
@@ -441,7 +439,8 @@ public class DefaultRequestManager implements RequestManager {
     public CompletableFuture<List<? extends TextEdit>> formatting(DocumentFormattingParams params) {
         if (checkStatus()) {
             try {
-                return (serverCapabilities.getDocumentFormattingProvider()) ? textDocumentService.formatting(params) : null;
+                Either<Boolean, DocumentFormattingOptions> provider = serverCapabilities.getDocumentFormattingProvider();
+                return provider.isLeft() || provider.isRight() ? textDocumentService.formatting(params) : null;
             } catch (Exception e) {
                 crashed(e);
                 return null;
@@ -487,7 +486,8 @@ public class DefaultRequestManager implements RequestManager {
     public CompletableFuture<Either<List<? extends Location>, List<? extends LocationLink>>> definition(DefinitionParams params) {
         if (checkStatus()) {
             try {
-                return (serverCapabilities.getDefinitionProvider()) ? textDocumentService.definition(params) : null;
+                Either<Boolean, DefinitionOptions> provider = serverCapabilities.getDefinitionProvider();
+                return provider.isLeft() || provider.isRight() ? textDocumentService.definition(params) : null;
             } catch (Exception e) {
                 crashed(e);
                 return null;
@@ -527,7 +527,7 @@ public class DefaultRequestManager implements RequestManager {
         if (checkStatus()) {
             try {
                 return (serverCapabilities.getCodeLensProvider() != null && serverCapabilities.getCodeLensProvider()
-                        .isResolveProvider()) ? textDocumentService.resolveCodeLens(unresolved) : null;
+                        .getResolveProvider()) ? textDocumentService.resolveCodeLens(unresolved) : null;
             } catch (Exception e) {
                 crashed(e);
                 return null;

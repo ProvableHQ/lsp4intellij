@@ -34,18 +34,14 @@ import com.intellij.ui.JBColor;
 import com.intellij.ui.LightweightHint;
 import com.intellij.usageView.UsageInfo;
 import com.intellij.usageView.UsageViewUtil;
-import com.intellij.usages.Usage;
-import com.intellij.usages.UsageInfo2UsageAdapter;
-import com.intellij.usages.UsageTarget;
-import com.intellij.usages.UsageViewManager;
-import com.intellij.usages.UsageViewPresentation;
+import com.intellij.usages.*;
 import org.wso2.lsp4intellij.editor.EditorEventManager;
 import org.wso2.lsp4intellij.editor.EditorEventManagerBase;
 
+import javax.swing.*;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
-import javax.swing.*;
 
 /**
  * Action for references / see usages (SHIFT+ALT+F7)
@@ -107,13 +103,13 @@ public class LSPReferencesAction extends DumbAwareAction {
             UsageViewPresentation presentation = createPresentation(targets.get(0).getElement(),
                     new FindUsagesOptions(editor.getProject()), false);
             UsageViewManager.getInstance(project)
-                    .showUsages(new UsageTarget[] { targets.get(0) }, usages.toArray(new Usage[usages.size()]),
+                    .showUsages(new UsageTarget[]{targets.get(0)}, usages.toArray(new Usage[usages.size()]),
                             presentation);
         }
     }
 
     private UsageViewPresentation createPresentation(PsiElement psiElement, FindUsagesOptions options,
-            boolean toOpenInNewTab) {
+                                                     boolean toOpenInNewTab) {
         UsageViewPresentation presentation = new UsageViewPresentation();
         String scopeString = options.searchScope.getDisplayName();
         presentation.setScopeText(scopeString);

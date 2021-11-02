@@ -57,48 +57,12 @@ import static org.wso2.lsp4intellij.utils.FileUtils.reloadEditors;
 
 public class IntellijLanguageClient implements ApplicationComponent, Disposable {
 
-    private static Logger LOG = Logger.getInstance(IntellijLanguageClient.class);
     private static final Map<Pair<String, String>, LanguageServerWrapper> extToLanguageWrapper = new ConcurrentHashMap<>();
-    private static Map<String, Set<LanguageServerWrapper>> projectToLanguageWrappers = new ConcurrentHashMap<>();
-    private static Map<Pair<String, String>, LanguageServerDefinition> extToServerDefinition = new ConcurrentHashMap<>();
-    private static Map<String, LSPExtensionManager> extToExtManager = new ConcurrentHashMap<>();
     private static final Predicate<LanguageServerWrapper> RUNNING = (s) -> s.getStatus() != ServerStatus.STOPPED;
-
-    @Override
-    public void initComponent() {
-        try {
-            // Adds project listener.
-            ApplicationManager.getApplication().getMessageBus().connect().subscribe(ProjectManager.TOPIC,
-                    new LSPProjectManagerListener());
-            // Adds editor listener.
-            EditorFactory.getInstance().addEditorFactoryListener(new LSPEditorListener(), this);
-            // Adds VFS listener.
-            VirtualFileManager.getInstance().addVirtualFileListener(new VFSListener());
-            // Adds document event listener.
-            ApplicationManager.getApplication().getMessageBus().connect().subscribe(AppTopics.FILE_DOCUMENT_SYNC,
-                    new LSPFileDocumentManagerListener());
-
-            // in case if JVM forcefully exit.
-            Runtime.getRuntime().addShutdownHook(new Thread(() -> projectToLanguageWrappers.values().stream()
-                    .flatMap(Collection::stream).filter(RUNNING).forEach(s -> s.stop(true))));
-
-            LOG.info("Intellij Language Client initialized successfully");
-        } catch (Exception e) {
-            LOG.warn("Fatal error occurred when initializing Intellij language client.", e);
-        }
-    }
-
-    /**
-     * Use it to initialize the server connection for the given project (useful if no editor is launched)
-     */
-    public void initProjectConnections(@NotNull Project project) {
-        String projectStr = FileUtils.projectToUri(project);
-        // find serverdefinition keys for this project and try to start a wrapper
-        extToServerDefinition.entrySet().stream().filter(e -> e.getKey().getRight().equals(projectStr)).forEach(entry -> {
-            updateLanguageWrapperContainers(project, entry.getKey(), entry.getValue()).start();
-        });
-
-    }
+    private static final Logger LOG = Logger.getInstance(IntellijLanguageClient.class);
+    private static final Map<String, Set<LanguageServerWrapper>> projectToLanguageWrappers = new ConcurrentHashMap<>();
+    private static final Map<Pair<String, String>, LanguageServerDefinition> extToServerDefinition = new ConcurrentHashMap<>();
+    private static final Map<String, LSPExtensionManager> extToExtManager = new ConcurrentHashMap<>();
 
     /**
      * Adds a new server definition, attached to the given file extension.
@@ -308,6 +272,15 @@ public class IntellijLanguageClient implements ApplicationComponent, Disposable 
     }
 
     /**
+     * Overrides default timeout values with a given set of timeouts.
+     *
+     * @param newTimeouts A map of Timeout types and corresponding values to be set.
+     */
+    public static void setTimeouts(Map<Timeouts, Integer> newTimeouts) {
+        Timeout.setTimeouts(newTimeouts);
+    }
+
+    /**
      * Returns current timeout value of a given timeout type.
      *
      * @return A map of Timeout types and corresponding values(in milliseconds).
@@ -315,15 +288,6 @@ public class IntellijLanguageClient implements ApplicationComponent, Disposable 
     @SuppressWarnings("unused")
     public static int getTimeout(Timeouts timeoutType) {
         return getTimeouts().get(timeoutType);
-    }
-
-    /**
-     * Overrides default timeout values with a given set of timeouts.
-     *
-     * @param newTimeouts A map of Timeout types and corresponding values to be set.
-     */
-    public static void setTimeouts(Map<Timeouts, Integer> newTimeouts) {
-        Timeout.setTimeouts(newTimeouts);
     }
 
     /**
@@ -369,16 +333,6 @@ public class IntellijLanguageClient implements ApplicationComponent, Disposable 
         return Optional.ofNullable(extToExtManager.get(definition.ext.split(",")[0]));
     }
 
-    @Override
-    public void disposeComponent() {
-        Disposer.dispose(this);
-    }
-
-    @Override
-    public void dispose() {
-        Disposer.dispose(this);
-    }
-
     private static void processDefinition(LanguageServerDefinition definition, String projectUri) {
         String[] extensions = definition.ext.split(LanguageServerDefinition.SPLIT_CHAR);
         for (String ext : extensions) {
@@ -391,5 +345,51 @@ public class IntellijLanguageClient implements ApplicationComponent, Disposable 
                 LOG.info("Updated server definition for " + ext);
             }
         }
+    }
+
+    @Override
+    public void initComponent() {
+        try {
+            // Adds project listener.
+            ApplicationManager.getApplication().getMessageBus().connect().subscribe(ProjectManager.TOPIC,
+                    new LSPProjectManagerListener());
+            // Adds editor listener.
+            EditorFactory.getInstance().addEditorFactoryListener(new LSPEditorListener(), this);
+            // Adds VFS listener.
+            VirtualFileManager.getInstance().addVirtualFileListener(new VFSListener());
+            // Adds document event listener.
+            ApplicationManager.getApplication().getMessageBus().connect().subscribe(AppTopics.FILE_DOCUMENT_SYNC,
+                    new LSPFileDocumentManagerListener());
+
+            // in case if JVM forcefully exit.
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> projectToLanguageWrappers.values().stream()
+                    .flatMap(Collection::stream).filter(RUNNING).forEach(s -> s.stop(true))));
+
+            LOG.info("Intellij Language Client initialized successfully");
+        } catch (Exception e) {
+            LOG.warn("Fatal error occurred when initializing Intellij language client.", e);
+        }
+    }
+
+    /**
+     * Use it to initialize the server connection for the given project (useful if no editor is launched)
+     */
+    public void initProjectConnections(@NotNull Project project) {
+        String projectStr = FileUtils.projectToUri(project);
+        // find serverdefinition keys for this project and try to start a wrapper
+        extToServerDefinition.entrySet().stream().filter(e -> e.getKey().getRight().equals(projectStr)).forEach(entry -> {
+            updateLanguageWrapperContainers(project, entry.getKey(), entry.getValue()).start();
+        });
+
+    }
+
+    @Override
+    public void disposeComponent() {
+        Disposer.dispose(this);
+    }
+
+    @Override
+    public void dispose() {
+        Disposer.dispose(this);
     }
 }

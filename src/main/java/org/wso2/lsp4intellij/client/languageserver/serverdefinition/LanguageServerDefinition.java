@@ -33,12 +33,11 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class LanguageServerDefinition {
 
+    public static final String SPLIT_CHAR = ",";
     private static final Logger LOG = Logger.getInstance(LanguageServerDefinition.class);
-
     public String ext;
     protected Map<String, String> languageIds = Collections.emptyMap();
-    private Map<String, StreamConnectionProvider> streamConnectionProviders = new ConcurrentHashMap<>();
-    public static final String SPLIT_CHAR = ",";
+    private final Map<String, StreamConnectionProvider> streamConnectionProviders = new ConcurrentHashMap<>();
 
     /**
      * Starts a Language server for the given directory and returns a tuple (InputStream, OutputStream)

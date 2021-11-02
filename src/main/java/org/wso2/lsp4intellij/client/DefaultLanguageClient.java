@@ -15,11 +15,7 @@
  */
 package org.wso2.lsp4intellij.client;
 
-import com.intellij.notification.Notification;
-import com.intellij.notification.NotificationAction;
-import com.intellij.notification.NotificationGroup;
-import com.intellij.notification.NotificationGroupManager;
-import com.intellij.notification.NotificationType;
+import com.intellij.notification.*;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.diagnostic.Logger;
@@ -112,7 +108,7 @@ public class DefaultLanguageClient implements LanguageClient {
         String uri = FileUtils.sanitizeURI(publishDiagnosticsParams.getUri());
         List<Diagnostic> diagnostics = publishDiagnosticsParams.getDiagnostics();
         Set<EditorEventManager> managers = EditorEventManagerBase.managersForUri(uri);
-        for (EditorEventManager manager: managers) {
+        for (EditorEventManager manager : managers) {
             manager.diagnostics(diagnostics);
         }
     }

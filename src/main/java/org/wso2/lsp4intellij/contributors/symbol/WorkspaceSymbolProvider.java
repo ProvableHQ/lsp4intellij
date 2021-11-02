@@ -17,17 +17,6 @@ package org.wso2.lsp4intellij.contributors.symbol;
 
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
 import com.intellij.openapi.vfs.VirtualFile;
 import org.eclipse.lsp4j.Location;
 import org.eclipse.lsp4j.SymbolInformation;
@@ -43,6 +32,17 @@ import org.wso2.lsp4intellij.requests.Timeouts;
 import org.wso2.lsp4intellij.utils.FileUtils;
 import org.wso2.lsp4intellij.utils.GUIUtils;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 /**
  * The workspace symbole provider implementation based on LSP
  *
@@ -50,81 +50,81 @@ import org.wso2.lsp4intellij.utils.GUIUtils;
  */
 public class WorkspaceSymbolProvider {
 
-  private static final Logger LOG = Logger.getInstance(WorkspaceSymbolProvider.class);
+    private static final Logger LOG = Logger.getInstance(WorkspaceSymbolProvider.class);
 
-  public List<LSPNavigationItem> workspaceSymbols(String name, Project project) {
-    final Set<LanguageServerWrapper> serverWrappers = IntellijLanguageClient
-        .getProjectToLanguageWrappers()
-        .getOrDefault(FileUtils.projectToUri(project), Collections.emptySet());
+    public List<LSPNavigationItem> workspaceSymbols(String name, Project project) {
+        final Set<LanguageServerWrapper> serverWrappers = IntellijLanguageClient
+                .getProjectToLanguageWrappers()
+                .getOrDefault(FileUtils.projectToUri(project), Collections.emptySet());
 
-    final WorkspaceSymbolParams symbolParams = new WorkspaceSymbolParams(name);
-    return serverWrappers.stream().filter(s -> s.getStatus() == ServerStatus.INITIALIZED)
-        .flatMap(server -> collectSymbol(server, server.getRequestManager(), symbolParams))
-        .map(s -> createNavigationItem(s, project)).filter(Objects::nonNull).collect(Collectors.toList());
-  }
-
-  private LSPNavigationItem createNavigationItem(LSPSymbolResult result, Project project) {
-    final SymbolInformation information = result.getSymbolInformation();
-    final Location location = information.getLocation();
-    final VirtualFile file = FileUtils.URIToVFS(location.getUri());
-
-    if (file != null) {
-      final LSPIconProvider iconProviderFor = GUIUtils.getIconProviderFor(result.getDefinition());
-      final LSPLabelProvider labelProvider = GUIUtils.getLabelProviderFor(result.getDefinition());
-      return new LSPNavigationItem(labelProvider.symbolNameFor(information, project),
-              labelProvider.symbolLocationFor(information, project), iconProviderFor.getSymbolIcon(information),
-              project, file,
-              location.getRange().getStart().getLine(),
-              location.getRange().getStart().getCharacter());
-    } else {
-      return null;
-    }
-  }
-
-  @SuppressWarnings("squid:S2142")
-  private Stream<LSPSymbolResult> collectSymbol(LanguageServerWrapper wrapper,
-      RequestManager requestManager,
-      WorkspaceSymbolParams symbolParams) {
-    final CompletableFuture<List<? extends SymbolInformation>> request = requestManager
-        .symbol(symbolParams);
-
-    if (request == null) {
-      return Stream.empty();
+        final WorkspaceSymbolParams symbolParams = new WorkspaceSymbolParams(name);
+        return serverWrappers.stream().filter(s -> s.getStatus() == ServerStatus.INITIALIZED)
+                .flatMap(server -> collectSymbol(server, server.getRequestManager(), symbolParams))
+                .map(s -> createNavigationItem(s, project)).filter(Objects::nonNull).collect(Collectors.toList());
     }
 
-    try {
-      List<? extends SymbolInformation> symbolInformations = request
-          .get(20000, TimeUnit.MILLISECONDS);
-      wrapper.notifySuccess(Timeouts.SYMBOLS);
-      return symbolInformations.stream()
-          .map(si -> new LSPSymbolResult(si, wrapper.getServerDefinition()));
-    } catch (TimeoutException e) {
-      LOG.warn(e);
-      wrapper.notifyFailure(Timeouts.SYMBOLS);
-    } catch (ExecutionException | InterruptedException e) {
-      LOG.warn(e);
-      wrapper.crashed(e);
-    }
-    return Stream.empty();
-  }
+    private LSPNavigationItem createNavigationItem(LSPSymbolResult result, Project project) {
+        final SymbolInformation information = result.getSymbolInformation();
+        final Location location = information.getLocation();
+        final VirtualFile file = FileUtils.URIToVFS(location.getUri());
 
-  private static class LSPSymbolResult {
-
-    private SymbolInformation symbolInformation;
-    private LanguageServerDefinition definition;
-
-    public LSPSymbolResult(SymbolInformation symbolInformation,
-        LanguageServerDefinition definition) {
-      this.symbolInformation = symbolInformation;
-      this.definition = definition;
+        if (file != null) {
+            final LSPIconProvider iconProviderFor = GUIUtils.getIconProviderFor(result.getDefinition());
+            final LSPLabelProvider labelProvider = GUIUtils.getLabelProviderFor(result.getDefinition());
+            return new LSPNavigationItem(labelProvider.symbolNameFor(information, project),
+                    labelProvider.symbolLocationFor(information, project), iconProviderFor.getSymbolIcon(information),
+                    project, file,
+                    location.getRange().getStart().getLine(),
+                    location.getRange().getStart().getCharacter());
+        } else {
+            return null;
+        }
     }
 
-    public SymbolInformation getSymbolInformation() {
-      return symbolInformation;
+    @SuppressWarnings("squid:S2142")
+    private Stream<LSPSymbolResult> collectSymbol(LanguageServerWrapper wrapper,
+                                                  RequestManager requestManager,
+                                                  WorkspaceSymbolParams symbolParams) {
+        final CompletableFuture<List<? extends SymbolInformation>> request = requestManager
+                .symbol(symbolParams);
+
+        if (request == null) {
+            return Stream.empty();
+        }
+
+        try {
+            List<? extends SymbolInformation> symbolInformations = request
+                    .get(20000, TimeUnit.MILLISECONDS);
+            wrapper.notifySuccess(Timeouts.SYMBOLS);
+            return symbolInformations.stream()
+                    .map(si -> new LSPSymbolResult(si, wrapper.getServerDefinition()));
+        } catch (TimeoutException e) {
+            LOG.warn(e);
+            wrapper.notifyFailure(Timeouts.SYMBOLS);
+        } catch (ExecutionException | InterruptedException e) {
+            LOG.warn(e);
+            wrapper.crashed(e);
+        }
+        return Stream.empty();
     }
 
-    public LanguageServerDefinition getDefinition() {
-      return definition;
+    private static class LSPSymbolResult {
+
+        private final SymbolInformation symbolInformation;
+        private final LanguageServerDefinition definition;
+
+        public LSPSymbolResult(SymbolInformation symbolInformation,
+                               LanguageServerDefinition definition) {
+            this.symbolInformation = symbolInformation;
+            this.definition = definition;
+        }
+
+        public SymbolInformation getSymbolInformation() {
+            return symbolInformation;
+        }
+
+        public LanguageServerDefinition getDefinition() {
+            return definition;
+        }
     }
-  }
 }

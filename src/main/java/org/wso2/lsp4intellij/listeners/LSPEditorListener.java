@@ -15,23 +15,22 @@
  */
 package org.wso2.lsp4intellij.listeners;
 
-        import com.intellij.openapi.components.ServiceManager;
-        import com.intellij.openapi.editor.EditorKind;
-        import com.intellij.openapi.editor.event.EditorFactoryEvent;
-        import com.intellij.openapi.editor.event.EditorFactoryListener;
-        import org.jetbrains.annotations.NotNull;
-        import org.wso2.lsp4intellij.IntellijLanguageClient;
+import com.intellij.openapi.editor.EditorKind;
+import com.intellij.openapi.editor.event.EditorFactoryEvent;
+import com.intellij.openapi.editor.event.EditorFactoryListener;
+import org.jetbrains.annotations.NotNull;
+import org.wso2.lsp4intellij.IntellijLanguageClient;
 
 public class LSPEditorListener implements EditorFactoryListener {
 
     public void editorReleased(@NotNull EditorFactoryEvent editorFactoryEvent) {
-        if(editorFactoryEvent.getEditor().getEditorKind() == EditorKind.MAIN_EDITOR){
+        if (editorFactoryEvent.getEditor().getEditorKind() == EditorKind.MAIN_EDITOR) {
             IntellijLanguageClient.editorClosed(editorFactoryEvent.getEditor());
         }
     }
 
     public void editorCreated(@NotNull EditorFactoryEvent editorFactoryEvent) {
-        if(editorFactoryEvent.getEditor().getEditorKind() == EditorKind.MAIN_EDITOR) {
+        if (editorFactoryEvent.getEditor().getEditorKind() == EditorKind.MAIN_EDITOR) {
             IntellijLanguageClient.editorOpened(editorFactoryEvent.getEditor());
         }
     }

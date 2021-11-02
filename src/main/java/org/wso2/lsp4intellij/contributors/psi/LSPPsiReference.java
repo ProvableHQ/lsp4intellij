@@ -120,7 +120,7 @@ public class LSPPsiReference implements PsiReference {
      * @return the array of available identifiers.
      */
     public Object[] getVariants() {
-        return new Object[] {};
+        return new Object[]{};
     }
 
     /**

@@ -31,12 +31,7 @@ import com.intellij.psi.PsiElement;
 import com.intellij.refactoring.listeners.RefactoringElementListener;
 import com.intellij.usageView.UsageInfo;
 import org.apache.commons.lang3.tuple.ImmutablePair;
-import org.eclipse.lsp4j.Range;
-import org.eclipse.lsp4j.ResourceOperation;
-import org.eclipse.lsp4j.TextDocumentEdit;
-import org.eclipse.lsp4j.TextEdit;
-import org.eclipse.lsp4j.VersionedTextDocumentIdentifier;
-import org.eclipse.lsp4j.WorkspaceEdit;
+import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.wso2.lsp4intellij.contributors.psi.LSPPsiElement;
 import org.wso2.lsp4intellij.editor.EditorEventManager;
@@ -50,11 +45,7 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Stream;
 
 import static org.wso2.lsp4intellij.utils.ApplicationUtils.invokeLater;
@@ -64,7 +55,7 @@ import static org.wso2.lsp4intellij.utils.ApplicationUtils.writeAction;
  * An Object handling WorkspaceEdits
  */
 public class WorkspaceEditHandler {
-    private static Logger LOG = Logger.getInstance(WorkspaceEditHandler.class);
+    private static final Logger LOG = Logger.getInstance(WorkspaceEditHandler.class);
 
     public static void applyEdit(PsiElement elem, String newName, UsageInfo[] infos,
                                  RefactoringElementListener listener, List<VirtualFile> openedEditors) {
@@ -86,7 +77,7 @@ public class WorkspaceEditHandler {
                     } catch (MalformedURLException | URISyntaxException e) {
                         LOG.warn(e);
                     }
-                    if (edits.keySet().contains(uri)) {
+                    if (edits.containsKey(uri)) {
                         edits.get(uri).add(edit);
                     } else {
                         List<TextEdit> textEdits = new ArrayList<>();

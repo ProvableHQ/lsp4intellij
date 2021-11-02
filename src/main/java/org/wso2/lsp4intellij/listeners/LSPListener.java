@@ -19,9 +19,9 @@ import com.intellij.openapi.diagnostic.Logger;
 import org.wso2.lsp4intellij.editor.EditorEventManager;
 
 public class LSPListener {
-    private Logger LOG = Logger.getInstance(LSPListener.class);
     protected EditorEventManager manager = null;
     protected boolean enabled = true;
+    private final Logger LOG = Logger.getInstance(LSPListener.class);
 
     /**
      * Sets the manager for this listener

@@ -25,8 +25,8 @@ import java.awt.*;
 public class CtrlRangeMarker {
 
     Location location;
-    private Editor editor;
-    private RangeHighlighter range;
+    private final Editor editor;
+    private final RangeHighlighter range;
 
     CtrlRangeMarker(Location location, Editor editor, RangeHighlighter range) {
         this.location = location;

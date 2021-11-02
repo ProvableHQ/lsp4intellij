@@ -27,21 +27,7 @@ import com.intellij.openapi.util.Key;
 import com.intellij.openapi.util.KeyWithDefaultValue;
 import com.intellij.openapi.util.TextRange;
 import com.intellij.openapi.util.UserDataHolderBase;
-import com.intellij.psi.ContributedReferenceHost;
-import com.intellij.psi.FileViewProvider;
-import com.intellij.psi.NavigatablePsiElement;
-import com.intellij.psi.PsiDocumentManager;
-import com.intellij.psi.PsiElement;
-import com.intellij.psi.PsiElementVisitor;
-import com.intellij.psi.PsiFile;
-import com.intellij.psi.PsiInvalidElementAccessException;
-import com.intellij.psi.PsiManager;
-import com.intellij.psi.PsiNameIdentifierOwner;
-import com.intellij.psi.PsiNamedElement;
-import com.intellij.psi.PsiPolyVariantReference;
-import com.intellij.psi.PsiReference;
-import com.intellij.psi.PsiReferenceService;
-import com.intellij.psi.ResolveState;
+import com.intellij.psi.*;
 import com.intellij.psi.scope.PsiScopeProcessor;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.psi.search.SearchScope;
@@ -60,15 +46,19 @@ import javax.swing.*;
  */
 public class LSPPsiElement implements PsiNameIdentifierOwner, NavigatablePsiElement {
 
+    public final int start;
+    public final int end;
     private final Key<KeyFMap> COPYABLE_USER_MAP_KEY = Key.create("COPYABLE_USER_MAP_KEY");
     private final AtomicFieldUpdater<LSPPsiElement, KeyFMap> updater = AtomicFieldUpdater.forFieldOfType(LSPPsiElement.class, KeyFMap.class);
     private final PsiManager manager;
     private final LSPPsiReference reference;
     private final Project project;
-    private String name;
     private final PsiFile file;
-    public final int start;
-    public final int end;
+    private String name;
+    /**
+     * Concurrent writes to this field are via CASes only, using the {@link #updater}
+     */
+    private volatile KeyFMap myUserMap = KeyFMap.EMPTY_MAP;
 
     /**
      * @param name    The name (text) of the element
@@ -85,11 +75,6 @@ public class LSPPsiElement implements PsiNameIdentifierOwner, NavigatablePsiElem
         manager = PsiManager.getInstance(project);
         reference = new LSPPsiReference(this);
     }
-
-    /**
-     * Concurrent writes to this field are via CASes only, using the {@link #updater}
-     */
-    private volatile KeyFMap myUserMap = KeyFMap.EMPTY_MAP;
 
     /**
      * Returns the language of the PSI element.
@@ -633,6 +618,10 @@ public class LSPPsiElement implements PsiNameIdentifierOwner, NavigatablePsiElem
         return myUserMap;
     }
 
+    protected void setUserMap(KeyFMap map) {
+        myUserMap = map;
+    }
+
     public <T> T getCopyableUserData(Key<T> key) {
         KeyFMap map = getUserData(COPYABLE_USER_MAP_KEY);
         return (map == null) ? null : map.get(key);
@@ -710,7 +699,7 @@ public class LSPPsiElement implements PsiNameIdentifierOwner, NavigatablePsiElem
             }
 
             public Icon getIcon(boolean unused) {
-                return (unused) ? null : null; //iconProvider.getIcon(LSPPsiElement.this)
+                return null; //iconProvider.getIcon(LSPPsiElement.this)
             }
         };
     }
@@ -772,9 +761,5 @@ public class LSPPsiElement implements PsiNameIdentifierOwner, NavigatablePsiElem
 
     protected void clearUserData() {
         setUserMap(KeyFMap.EMPTY_MAP);
-    }
-
-    protected void setUserMap(KeyFMap map) {
-        myUserMap = map;
     }
 }

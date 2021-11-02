@@ -26,10 +26,10 @@ import java.util.concurrent.TimeUnit;
 
 public class LSPCaretListenerImpl extends LSPListener implements CaretListener {
 
-    private Logger LOG = Logger.getInstance(LSPCaretListenerImpl.class);
-    private ScheduledExecutorService scheduler;
-    private ScheduledFuture<?> scheduledFuture;
     private static final long DEBOUNCE_INTERVAL_MS = 500;
+    private final Logger LOG = Logger.getInstance(LSPCaretListenerImpl.class);
+    private final ScheduledExecutorService scheduler;
+    private ScheduledFuture<?> scheduledFuture;
 
     public LSPCaretListenerImpl() {
         scheduler = Executors.newScheduledThreadPool(1);

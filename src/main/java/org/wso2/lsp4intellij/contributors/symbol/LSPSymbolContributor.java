@@ -18,7 +18,6 @@ package org.wso2.lsp4intellij.contributors.symbol;
 import com.intellij.ide.util.gotoByName.ChooseByNamePopup;
 import com.intellij.navigation.ChooseByNameContributorEx;
 import com.intellij.navigation.NavigationItem;
-import com.intellij.openapi.project.Project;
 import com.intellij.psi.search.GlobalSearchScope;
 import com.intellij.util.Processor;
 import com.intellij.util.indexing.FindSymbolParameters;
@@ -40,18 +39,18 @@ public class LSPSymbolContributor implements ChooseByNameContributorEx {
     @Override
     public void processNames(@NotNull Processor<? super String> processor, @NotNull GlobalSearchScope globalSearchScope, @Nullable IdFilter idFilter) {
         String queryString = Optional.ofNullable(globalSearchScope.getProject())
-            .map(p -> p.getUserData(ChooseByNamePopup.CURRENT_SEARCH_PATTERN)).orElse("");
+                .map(p -> p.getUserData(ChooseByNamePopup.CURRENT_SEARCH_PATTERN)).orElse("");
 
         workspaceSymbolProvider.workspaceSymbols(queryString, globalSearchScope.getProject()).stream()
-            .filter(ni -> globalSearchScope.accept(ni.getFile()))
-            .map(NavigationItem::getName)
-            .forEach(processor::process);
+                .filter(ni -> globalSearchScope.accept(ni.getFile()))
+                .map(NavigationItem::getName)
+                .forEach(processor::process);
     }
 
     @Override
     public void processElementsWithName(@NotNull String s, @NotNull Processor<? super NavigationItem> processor, @NotNull FindSymbolParameters findSymbolParameters) {
         workspaceSymbolProvider.workspaceSymbols(s, findSymbolParameters.getProject()).stream()
-            .filter(ni -> findSymbolParameters.getSearchScope().accept(ni.getFile()))
-            .forEach(processor::process);
+                .filter(ni -> findSymbolParameters.getSearchScope().accept(ni.getFile()))
+                .forEach(processor::process);
     }
 }

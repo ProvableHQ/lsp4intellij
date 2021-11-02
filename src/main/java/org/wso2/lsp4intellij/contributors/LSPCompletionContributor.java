@@ -15,11 +15,8 @@
  */
 package org.wso2.lsp4intellij.contributors;
 
-import com.intellij.codeInsight.completion.CompletionContributor;
-import com.intellij.codeInsight.completion.CompletionParameters;
-import com.intellij.codeInsight.completion.CompletionProvider;
-import com.intellij.codeInsight.completion.CompletionResultSet;
-import com.intellij.codeInsight.completion.PlainPrefixMatcher;
+import com.intellij.codeInsight.completion.*;
+import com.intellij.codeInsight.lookup.LookupElement;
 import com.intellij.openapi.application.ex.ApplicationUtil;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.Editor;
@@ -32,6 +29,8 @@ import org.wso2.lsp4intellij.editor.EditorEventManager;
 import org.wso2.lsp4intellij.editor.EditorEventManagerBase;
 import org.wso2.lsp4intellij.utils.DocumentUtils;
 
+import java.util.List;
+
 /**
  * The completion contributor for the LSP
  */
@@ -39,7 +38,7 @@ class LSPCompletionContributor extends CompletionContributor {
     private static final Logger LOG = Logger.getInstance(LSPCompletionContributor.class);
 
     @Override
-    public void fillCompletionVariants(@NotNull CompletionParameters parameters, @NotNull CompletionResultSet result) {
+    public void fillCompletionVariants(@NotNull final CompletionParameters parameters, @NotNull CompletionResultSet result) {
         CompletionProvider<CompletionParameters> provider = new CompletionProvider<CompletionParameters>() {
             @Override
             protected void addCompletions(@NotNull CompletionParameters parameters, @NotNull ProcessingContext context, @NotNull CompletionResultSet result) {
@@ -51,13 +50,19 @@ class LSPCompletionContributor extends CompletionContributor {
 
                         EditorEventManager manager = EditorEventManagerBase.forEditor(editor);
                         if (manager != null) {
-                            result.addAllElements(manager.completion(serverPos));
+                            List<LookupElement> list = manager.completion(serverPos);
+                            if (list.size() > 0) {
+                                result.addAllElements(manager.completion(serverPos));
+                                result.stopHere();
+                            }
                         }
                         return null;
                     }, ProgressIndicatorProvider.getGlobalProgressIndicator());
                 } catch (ProcessCanceledException ignored) {
                     // ProcessCanceledException can be ignored.
                 } catch (Exception e) {
+                    LOG.warn("LSP Completions ended with an error", e);
+                } catch (Throwable e) {
                     LOG.warn("LSP Completions ended with an error", e);
                 }
             }

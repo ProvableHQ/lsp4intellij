@@ -43,14 +43,13 @@ import org.wso2.lsp4intellij.requests.Timeouts;
 import org.wso2.lsp4intellij.utils.ApplicationUtils;
 import org.wso2.lsp4intellij.utils.GUIUtils;
 
+import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import javax.swing.*;
 
 public class LSPServerStatusWidget implements StatusBarWidget {
 
@@ -165,6 +164,16 @@ public class LSPServerStatusWidget implements StatusBarWidget {
             };
         }
 
+        @Override
+        public String getTooltipText() {
+            LanguageServerWrapper wrapper = LanguageServerWrapper.forProject(project);
+            if (wrapper == null) {
+                return "Language server, project " + projectName;
+            } else {
+                return "Language server for extension " + wrapper.getServerDefinition().ext + ", project " + projectName;
+            }
+        }
+
         class ShowConnectedFiles extends AnAction implements DumbAware {
             ShowConnectedFiles() {
                 super("&Show Connected Files", "Show the files connected to the server", null);
@@ -219,17 +228,6 @@ public class LSPServerStatusWidget implements StatusBarWidget {
             @Override
             public void actionPerformed(@NotNull AnActionEvent anActionEvent) {
                 LanguageServerWrapper.forProject(project).restart();
-            }
-
-        }
-
-        @Override
-        public String getTooltipText() {
-            LanguageServerWrapper wrapper = LanguageServerWrapper.forProject(project);
-            if (wrapper == null) {
-                return "Language server, project " + projectName;
-            } else {
-                return "Language server for extension " + wrapper.getServerDefinition().ext + ", project " + projectName;
             }
         }
     }

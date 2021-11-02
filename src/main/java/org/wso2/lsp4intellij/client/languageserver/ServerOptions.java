@@ -15,15 +15,7 @@
  */
 package org.wso2.lsp4intellij.client.languageserver;
 
-import org.eclipse.lsp4j.CodeLensOptions;
-import org.eclipse.lsp4j.CompletionOptions;
-import org.eclipse.lsp4j.DocumentLinkOptions;
-import org.eclipse.lsp4j.DocumentOnTypeFormattingOptions;
-import org.eclipse.lsp4j.ExecuteCommandOptions;
-import org.eclipse.lsp4j.SemanticHighlightingServerCapabilities;
-import org.eclipse.lsp4j.ServerCapabilities;
-import org.eclipse.lsp4j.SignatureHelpOptions;
-import org.eclipse.lsp4j.TextDocumentSyncKind;
+import org.eclipse.lsp4j.*;
 
 /**
  * Class containing the options of the language server.

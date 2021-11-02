@@ -56,9 +56,9 @@ import static org.wso2.lsp4intellij.utils.ApplicationUtils.computableReadAction;
  * Various file / uri related methods
  */
 public class FileUtils {
+    public final static String SPACE_ENCODED = "%20";
     private final static OS os = (System.getProperty("os.name").toLowerCase().contains("win")) ? OS.WINDOWS : OS.UNIX;
     private final static String COLON_ENCODED = "%3A";
-    public final static String SPACE_ENCODED = "%20";
     private final static String URI_FILE_BEGIN = "file:";
     private final static String URI_VALID_FILE_BEGIN = "file:///";
     private final static char URI_PATH_SEP = '/';
@@ -227,7 +227,7 @@ public class FileUtils {
                 if (os == OS.UNIX) {
                     return reconstructed.append(uriCp).toString();
                 } else {
-                    reconstructed.append(uriCp.substring(0, uriCp.indexOf(URI_PATH_SEP)));
+                    reconstructed.append(uriCp, 0, uriCp.indexOf(URI_PATH_SEP));
                     char driveLetter = reconstructed.charAt(URI_VALID_FILE_BEGIN.length());
                     if (Character.isLowerCase(driveLetter)) {
                         reconstructed.setCharAt(URI_VALID_FILE_BEGIN.length(), Character.toUpperCase(driveLetter));
@@ -300,13 +300,6 @@ public class FileUtils {
     }
 
     /**
-     * Object representing the OS type (Windows or Unix)
-     */
-    public enum OS {
-        WINDOWS, UNIX
-    }
-
-    /**
      * Checks if the given virtual file instance is supported by this LS client library.
      */
     public static boolean isFileSupported(@Nullable VirtualFile file) {
@@ -370,5 +363,12 @@ public class FileUtils {
             }
             return lspExtManager.isFileContentSupported(file);
         });
+    }
+
+    /**
+     * Object representing the OS type (Windows or Unix)
+     */
+    public enum OS {
+        WINDOWS, UNIX
     }
 }

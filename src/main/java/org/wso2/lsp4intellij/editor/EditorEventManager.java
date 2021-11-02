@@ -32,18 +32,9 @@ import com.intellij.lang.annotation.HighlightSeverity;
 import com.intellij.openapi.actionSystem.ActionManager;
 import com.intellij.openapi.command.CommandProcessor;
 import com.intellij.openapi.diagnostic.Logger;
-import com.intellij.openapi.editor.Document;
-import com.intellij.openapi.editor.Editor;
-import com.intellij.openapi.editor.EditorModificationUtil;
-import com.intellij.openapi.editor.LogicalPosition;
-import com.intellij.openapi.editor.ScrollType;
-import com.intellij.openapi.editor.SelectionModel;
+import com.intellij.openapi.editor.*;
 import com.intellij.openapi.editor.colors.EditorColors;
-import com.intellij.openapi.editor.event.DocumentEvent;
-import com.intellij.openapi.editor.event.DocumentListener;
-import com.intellij.openapi.editor.event.EditorMouseEvent;
-import com.intellij.openapi.editor.event.EditorMouseListener;
-import com.intellij.openapi.editor.event.EditorMouseMotionListener;
+import com.intellij.openapi.editor.event.*;
 import com.intellij.openapi.editor.ex.EditorSettingsExternalizable;
 import com.intellij.openapi.editor.markup.HighlighterLayer;
 import com.intellij.openapi.editor.markup.HighlighterTargetArea;
@@ -54,7 +45,6 @@ import com.intellij.openapi.fileTypes.PlainTextLanguage;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Pair;
 import com.intellij.openapi.util.TextRange;
-import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.openapi.vfs.VfsUtil;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiDocumentManager;
@@ -63,41 +53,7 @@ import com.intellij.psi.PsiFile;
 import com.intellij.ui.Hint;
 import com.intellij.util.SmartList;
 import org.apache.commons.lang3.StringUtils;
-import org.eclipse.lsp4j.CodeAction;
-import org.eclipse.lsp4j.CodeActionContext;
-import org.eclipse.lsp4j.CodeActionParams;
-import org.eclipse.lsp4j.Command;
-import org.eclipse.lsp4j.CompletionItem;
-import org.eclipse.lsp4j.CompletionItemKind;
-import org.eclipse.lsp4j.CompletionList;
-import org.eclipse.lsp4j.CompletionParams;
-import org.eclipse.lsp4j.DefinitionParams;
-import org.eclipse.lsp4j.Diagnostic;
-import org.eclipse.lsp4j.DidSaveTextDocumentParams;
-import org.eclipse.lsp4j.DocumentFormattingParams;
-import org.eclipse.lsp4j.DocumentRangeFormattingParams;
-import org.eclipse.lsp4j.ExecuteCommandParams;
-import org.eclipse.lsp4j.FormattingOptions;
-import org.eclipse.lsp4j.Hover;
-import org.eclipse.lsp4j.HoverParams;
-import org.eclipse.lsp4j.InsertTextFormat;
-import org.eclipse.lsp4j.Location;
-import org.eclipse.lsp4j.LocationLink;
-import org.eclipse.lsp4j.MarkupContent;
-import org.eclipse.lsp4j.Position;
-import org.eclipse.lsp4j.Range;
-import org.eclipse.lsp4j.ReferenceContext;
-import org.eclipse.lsp4j.ReferenceParams;
-import org.eclipse.lsp4j.RenameParams;
-import org.eclipse.lsp4j.SignatureHelp;
-import org.eclipse.lsp4j.SignatureHelpParams;
-import org.eclipse.lsp4j.SignatureInformation;
-import org.eclipse.lsp4j.TextDocumentIdentifier;
-import org.eclipse.lsp4j.TextDocumentSaveReason;
-import org.eclipse.lsp4j.TextDocumentSyncKind;
-import org.eclipse.lsp4j.TextEdit;
-import org.eclipse.lsp4j.WillSaveTextDocumentParams;
-import org.eclipse.lsp4j.WorkspaceEdit;
+import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.JsonRpcException;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.jsonrpc.messages.Tuple;
@@ -119,16 +75,12 @@ import org.wso2.lsp4intellij.utils.DocumentUtils;
 import org.wso2.lsp4intellij.utils.FileUtils;
 import org.wso2.lsp4intellij.utils.GUIUtils;
 
-import java.awt.Cursor;
-import java.awt.Point;
+import javax.swing.*;
+import java.awt.*;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -136,26 +88,10 @@ import java.util.concurrent.TimeoutException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.swing.Icon;
-
-import static org.wso2.lsp4intellij.editor.EditorEventManagerBase.getCtrlRange;
-import static org.wso2.lsp4intellij.editor.EditorEventManagerBase.getIsCtrlDown;
-import static org.wso2.lsp4intellij.editor.EditorEventManagerBase.getIsKeyPressed;
-import static org.wso2.lsp4intellij.editor.EditorEventManagerBase.setCtrlRange;
+import static org.wso2.lsp4intellij.editor.EditorEventManagerBase.*;
 import static org.wso2.lsp4intellij.requests.Timeout.getTimeout;
-import static org.wso2.lsp4intellij.requests.Timeouts.CODEACTION;
-import static org.wso2.lsp4intellij.requests.Timeouts.COMPLETION;
-import static org.wso2.lsp4intellij.requests.Timeouts.DEFINITION;
-import static org.wso2.lsp4intellij.requests.Timeouts.EXECUTE_COMMAND;
-import static org.wso2.lsp4intellij.requests.Timeouts.HOVER;
-import static org.wso2.lsp4intellij.requests.Timeouts.REFERENCES;
-import static org.wso2.lsp4intellij.requests.Timeouts.SIGNATURE;
-import static org.wso2.lsp4intellij.requests.Timeouts.WILLSAVE;
-import static org.wso2.lsp4intellij.utils.ApplicationUtils.computableReadAction;
-import static org.wso2.lsp4intellij.utils.ApplicationUtils.computableWriteAction;
-import static org.wso2.lsp4intellij.utils.ApplicationUtils.invokeLater;
-import static org.wso2.lsp4intellij.utils.ApplicationUtils.pool;
-import static org.wso2.lsp4intellij.utils.ApplicationUtils.writeAction;
+import static org.wso2.lsp4intellij.requests.Timeouts.*;
+import static org.wso2.lsp4intellij.utils.ApplicationUtils.*;
 import static org.wso2.lsp4intellij.utils.GUIUtils.createAndShowEditorHint;
 
 /**
@@ -170,39 +106,34 @@ import static org.wso2.lsp4intellij.utils.GUIUtils.createAndShowEditorHint;
  * serverOptions       The options of the server regarding completion, signatureHelp, syncKind, etc
  * wrapper             The corresponding LanguageServerWrapper
  */
+@SuppressWarnings("unchecked")
 public class EditorEventManager {
 
+    public static final String SNIPPET_PLACEHOLDER_REGEX = "(\\$\\{\\d+:?([^{^}]*)}|\\$\\d+)";
+    private static final long CTRL_THRESH = EditorSettingsExternalizable.getInstance().getTooltipsDelay() * 1000000L;
     public final DocumentEventManager documentEventManager;
-    protected Logger LOG = Logger.getInstance(EditorEventManager.class);
-
+    private final List<Diagnostic> diagnostics = new ArrayList<>();
+    private final Project project;
+    private final TextDocumentIdentifier identifier;
+    private final EditorMouseListener mouseListener;
+    private final EditorMouseMotionListener mouseMotionListener;
+    private final LSPCaretListenerImpl caretListener;
+    private final List<String> signatureTriggers;
+    private final TextDocumentSyncKind syncKind;
     public Editor editor;
     public LanguageServerWrapper wrapper;
-    private Project project;
-    private TextDocumentIdentifier identifier;
-    private EditorMouseListener mouseListener;
-    private EditorMouseMotionListener mouseMotionListener;
-    private LSPCaretListenerImpl caretListener;
-
     public List<String> completionTriggers;
-    private List<String> signatureTriggers;
-    private TextDocumentSyncKind syncKind;
+    protected Logger LOG = Logger.getInstance(EditorEventManager.class);
     private volatile boolean needSave = false;
     private long predTime = -1L;
     private long ctrlTime = -1L;
     private boolean isOpen = false;
-
     private boolean mouseInEditor = true;
     private Hint currentHint;
-
-    private final List<Diagnostic> diagnostics = new ArrayList<>();
     private AnnotationHolder anonHolder;
     private List<Annotation> annotations = new ArrayList<>();
     private volatile boolean diagnosticSyncRequired = true;
     private volatile boolean codeActionSyncRequired = false;
-
-    private static final long CTRL_THRESH = EditorSettingsExternalizable.getInstance().getTooltipsDelay() * 1000000;
-
-    public static final String SNIPPET_PLACEHOLDER_REGEX = "(\\$\\{\\d+:?([^{^}]*)}|\\$\\d+)";
 
     //Todo - Revisit arguments order and add remaining listeners
     public EditorEventManager(Editor editor, DocumentListener documentListener, EditorMouseListener mouseListener,
@@ -835,7 +766,7 @@ public class EditorEventManager {
      * @param pos The LSP position
      * @return The suggestions
      */
-    public Iterable<? extends LookupElement> completion(Position pos) {
+    public List<LookupElement> completion(Position pos) {
 
         List<LookupElement> lookupItems = new ArrayList<>();
         CompletableFuture<Either<List<CompletionItem>, CompletionList>> request = wrapper.getRequestManager()
@@ -889,7 +820,7 @@ public class EditorEventManager {
         String insertText = item.getInsertText();
         CompletionItemKind kind = item.getKind();
         String label = item.getLabel();
-        TextEdit textEdit = item.getTextEdit();
+        Either<TextEdit, InsertReplaceEdit> textEdit = item.getTextEdit();
         List<TextEdit> addTextEdits = item.getAdditionalTextEdits();
         String presentableText = StringUtils.isNotEmpty(label) ? label : (insertText != null) ? insertText : "";
         String tailText = (detail != null) ? detail : "";
@@ -899,7 +830,7 @@ public class EditorEventManager {
 
         String lookupString = null;
         if (textEdit != null) {
-            lookupString = textEdit.getNewText();
+            lookupString = textEdit.getLeft().getNewText();
         } else if (StringUtils.isNotEmpty(insertText)) {
             lookupString = insertText;
         } else if (StringUtils.isNotEmpty(label)) {
@@ -990,9 +921,9 @@ public class EditorEventManager {
             });
             context.commitDocument();
 
-            item.getTextEdit().setNewText(getLookupStringWithoutPlaceholders(item, lookupString));
+            item.getTextEdit().getLeft().setNewText(getLookupStringWithoutPlaceholders(item, lookupString));
 
-            applyEdit(Integer.MAX_VALUE, Collections.singletonList(item.getTextEdit()), "text edit", false, true);
+            applyEdit(Integer.MAX_VALUE, Collections.singletonList(item.getTextEdit().getLeft()), "text edit", false, true);
         } else {
             // client handles insertion, determine a prefix (to allow completions of partially matching items)
             int prefixLength = getCompletionPrefixLength(context.getStartOffset());
@@ -1538,9 +1469,9 @@ public class EditorEventManager {
     }
 
     private static class LSPTextEdit implements Comparable<LSPTextEdit> {
-        private String text;
-        private int startOffset;
-        private int endOffset;
+        private final String text;
+        private final int startOffset;
+        private final int endOffset;
 
         LSPTextEdit(String text, int start, int end) {
             this.text = text;

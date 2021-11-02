@@ -19,7 +19,7 @@ import com.intellij.openapi.editor.Editor;
 import org.wso2.lsp4intellij.utils.FileUtils;
 import org.wso2.lsp4intellij.utils.OSUtils;
 
-import java.awt.KeyboardFocusManager;
+import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.util.HashMap;
 import java.util.HashSet;

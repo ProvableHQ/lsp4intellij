@@ -35,9 +35,9 @@ import static org.wso2.lsp4intellij.utils.ApplicationUtils.computableReadAction;
  */
 public class DocumentUtils {
 
-    private static Logger LOG = Logger.getInstance(DocumentUtils.class);
     public static final String WIN_SEPARATOR = "\r\n";
     public static final String LINUX_SEPARATOR = "\n";
+    private static final Logger LOG = Logger.getInstance(DocumentUtils.class);
 
     /**
      * Gets the line at the given offset given an editor and bolds the text between the given offsets
@@ -56,7 +56,7 @@ public class DocumentUtils {
             String line = doc.getText(new TextRange(lineStartOff, lineEndOff));
             int startOffsetInLine = startOffset - lineStartOff;
             int endOffsetInLine = endOffset - lineStartOff;
-            StringBuilder sb = new StringBuilder( line.length()+7 );
+            StringBuilder sb = new StringBuilder(line.length() + 7);
             sb.append(line, 0, startOffsetInLine);
             sb.append("<b>");
             sb.append(line, startOffsetInLine, endOffsetInLine);
@@ -179,7 +179,7 @@ public class DocumentUtils {
         return computableReadAction(() -> editor.getSettings().getTabSize(editor.getProject()));
     }
 
-    public static boolean shouldUseSpaces(Editor editor){
+    public static boolean shouldUseSpaces(Editor editor) {
         return computableReadAction(() -> !editor.getSettings().isUseTabCharacter(editor.getProject()));
     }
 

@@ -28,8 +28,8 @@ import java.util.function.Function;
 
 class MessageHandler implements Function<MessageConsumer, MessageConsumer> {
 
-    private ServerListener listener;
-    private BooleanSupplier isRunning;
+    private final ServerListener listener;
+    private final BooleanSupplier isRunning;
     private LanguageServer languageServer;
 
     MessageHandler(@NotNull ServerListener listener, @NotNull BooleanSupplier isRunning) {
@@ -40,7 +40,7 @@ class MessageHandler implements Function<MessageConsumer, MessageConsumer> {
     @Override
     public MessageConsumer apply(MessageConsumer messageConsumer) {
         return message -> {
-            if(isRunning.getAsBoolean()) {
+            if (isRunning.getAsBoolean()) {
                 handleMessage(message);
                 messageConsumer.consume(message);
             }
@@ -49,6 +49,7 @@ class MessageHandler implements Function<MessageConsumer, MessageConsumer> {
     }
 
     private void handleMessage(Message message) {
+        System.out.println(message);
         if (message instanceof ResponseMessage) {
             ResponseMessage responseMessage = (ResponseMessage) message;
             if (responseMessage.getResult() instanceof InitializeResult) {

@@ -23,10 +23,9 @@ import org.eclipse.lsp4j.SymbolKind;
 import org.wso2.lsp4intellij.client.languageserver.ServerStatus;
 import org.wso2.lsp4intellij.client.languageserver.serverdefinition.LanguageServerDefinition;
 
+import javax.swing.*;
 import java.util.HashMap;
 import java.util.Map;
-
-import javax.swing.Icon;
 
 public class LSPDefaultIconProvider extends LSPIconProvider {
 

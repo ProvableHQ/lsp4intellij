@@ -87,10 +87,10 @@ class LSPFileEventManager {
             if (manager != null) {
                 manager.documentSaved();
                 FileUtils.findProjectsFor(file).forEach(p -> changedConfiguration(uri,
-                    FileUtils.projectToUri(p), FileChangeType.Changed));
+                        FileUtils.projectToUri(p), FileChangeType.Changed));
             } else {
                 FileUtils.findProjectsFor(file).forEach(p -> changedConfiguration(uri,
-                    FileUtils.projectToUri(p), FileChangeType.Changed));
+                        FileUtils.projectToUri(p), FileChangeType.Changed));
             }
         });
     }
@@ -117,9 +117,9 @@ class LSPFileEventManager {
             ApplicationUtils.invokeAfterPsiEvents(() -> {
                 // Notifies the language server.
                 FileUtils.findProjectsFor(file).forEach(p -> changedConfiguration(oldFileUri,
-                    FileUtils.projectToUri(p), FileChangeType.Deleted));
+                        FileUtils.projectToUri(p), FileChangeType.Deleted));
                 FileUtils.findProjectsFor(file).forEach(p -> changedConfiguration(newFileUri,
-                    FileUtils.projectToUri(p), FileChangeType.Created));
+                        FileUtils.projectToUri(p), FileChangeType.Created));
 
                 FileUtils.findProjectsFor(file).forEach(p -> {
                     // Detaches old file from the wrappers.
@@ -155,7 +155,7 @@ class LSPFileEventManager {
         }
         ApplicationUtils.invokeAfterPsiEvents(() -> {
             FileUtils.findProjectsFor(file).forEach(p -> changedConfiguration(uri,
-                FileUtils.projectToUri(p), FileChangeType.Deleted));
+                    FileUtils.projectToUri(p), FileChangeType.Deleted));
         });
     }
 
@@ -171,9 +171,9 @@ class LSPFileEventManager {
                 // Getting the right file is not trivial here since we only have the file name. Since we have to iterate over
                 // all opened projects and filter based on the file name.
                 Set<VirtualFile> files = Arrays.stream(ProjectManager.getInstance().getOpenProjects())
-                    .flatMap(p -> Arrays.stream(searchFiles(newFileName, p)))
-                    .map(PsiFile::getVirtualFile)
-                    .collect(Collectors.toSet());
+                        .flatMap(p -> Arrays.stream(searchFiles(newFileName, p)))
+                        .map(PsiFile::getVirtualFile)
+                        .collect(Collectors.toSet());
 
                 for (VirtualFile file : files) {
                     if (!FileUtils.isFileSupported(file)) {
@@ -184,9 +184,9 @@ class LSPFileEventManager {
 
                     // Notifies the language server.
                     FileUtils.findProjectsFor(file).forEach(p -> changedConfiguration(oldFileUri,
-                        FileUtils.projectToUri(p), FileChangeType.Deleted));
+                            FileUtils.projectToUri(p), FileChangeType.Deleted));
                     FileUtils.findProjectsFor(file).forEach(p -> changedConfiguration(newFileUri,
-                        FileUtils.projectToUri(p), FileChangeType.Created));
+                            FileUtils.projectToUri(p), FileChangeType.Created));
 
                     FileUtils.findProjectsFor(file).forEach(p -> {
                         // Detaches old file from the wrappers.
@@ -195,9 +195,9 @@ class LSPFileEventManager {
                             wrappers.forEach(wrapper -> {
                                 // make these calls first since the disconnect might stop the LS client if its last file.
                                 wrapper.getRequestManager().didChangeWatchedFiles(
-                                    getDidChangeWatchedFilesParams(oldFileUri, FileChangeType.Deleted));
+                                        getDidChangeWatchedFilesParams(oldFileUri, FileChangeType.Deleted));
                                 wrapper.getRequestManager().didChangeWatchedFiles(
-                                    getDidChangeWatchedFilesParams(newFileUri, FileChangeType.Created));
+                                        getDidChangeWatchedFilesParams(newFileUri, FileChangeType.Created));
 
                                 wrapper.disconnect(oldFileUri, FileUtils.projectToUri(p));
                             });
@@ -231,7 +231,7 @@ class LSPFileEventManager {
         if (uri != null) {
             ApplicationUtils.invokeAfterPsiEvents(() -> {
                 FileUtils.findProjectsFor(file).forEach(p -> changedConfiguration(uri,
-                    FileUtils.projectToUri(p), FileChangeType.Created));
+                        FileUtils.projectToUri(p), FileChangeType.Created));
             });
         }
     }

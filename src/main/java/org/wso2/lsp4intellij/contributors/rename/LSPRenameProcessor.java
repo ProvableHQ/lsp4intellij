@@ -33,12 +33,7 @@ import org.wso2.lsp4intellij.editor.EditorEventManagerBase;
 import org.wso2.lsp4intellij.requests.WorkspaceEditHandler;
 import org.wso2.lsp4intellij.utils.FileUtils;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -46,9 +41,21 @@ import java.util.stream.Collectors;
  */
 public class LSPRenameProcessor extends RenamePsiElementProcessor {
 
-    private PsiElement curElem;
-    private final Set<PsiElement> elements = new HashSet<>();
     private static final Set<VirtualFile> openedEditors = new HashSet<>();
+    private final Set<PsiElement> elements = new HashSet<>();
+    private PsiElement curElem;
+
+    public static void clearEditors() {
+        openedEditors.clear();
+    }
+
+    public static Set<VirtualFile> getEditors() {
+        return openedEditors;
+    }
+
+    static void addEditors(List<VirtualFile> toAdd) {
+        openedEditors.addAll(toAdd);
+    }
 
     @Override
     public boolean canProcessElement(@NotNull PsiElement element) {
@@ -95,17 +102,5 @@ public class LSPRenameProcessor extends RenamePsiElementProcessor {
     @Override
     public boolean isInplaceRenameSupported() {
         return true;
-    }
-
-    public static void clearEditors() {
-        openedEditors.clear();
-    }
-
-    public static Set<VirtualFile> getEditors() {
-        return openedEditors;
-    }
-
-    static void addEditors(List<VirtualFile> toAdd) {
-        openedEditors.addAll(toAdd);
     }
 }

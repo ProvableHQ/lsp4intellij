@@ -37,7 +37,7 @@ import java.util.stream.Collectors;
  */
 public class LSPInplaceRenamer extends MemberInplaceRenamer {
 
-    private Editor editor;
+    private final Editor editor;
 
     LSPInplaceRenamer(@NotNull PsiNamedElement elementToRename, PsiElement substituted, Editor editor) {
         super(elementToRename, substituted, editor, elementToRename.getName(), elementToRename.getName());

@@ -21,15 +21,15 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public class LSPDefaultLabelProvider implements LSPLabelProvider {
-  @NotNull
-  @Override
-  public String symbolNameFor(@NotNull SymbolInformation symbolInformation, @NotNull Project project) {
-    return symbolInformation.getName();
-  }
+    @NotNull
+    @Override
+    public String symbolNameFor(@NotNull SymbolInformation symbolInformation, @NotNull Project project) {
+        return symbolInformation.getName();
+    }
 
-  @Nullable
-  @Override
-  public String symbolLocationFor(@NotNull SymbolInformation symbolInformation, @NotNull Project project) {
-    return symbolInformation.getContainerName();
-  }
+    @Nullable
+    @Override
+    public String symbolLocationFor(@NotNull SymbolInformation symbolInformation, @NotNull Project project) {
+        return symbolInformation.getContainerName();
+    }
 }

@@ -16,10 +16,7 @@
 package org.wso2.lsp4intellij.contributors.annotator;
 
 import com.intellij.codeInspection.ProblemHighlightType;
-import com.intellij.lang.annotation.Annotation;
-import com.intellij.lang.annotation.AnnotationHolder;
-import com.intellij.lang.annotation.ExternalAnnotator;
-import com.intellij.lang.annotation.HighlightSeverity;
+import com.intellij.lang.annotation.*;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.util.TextRange;
@@ -38,7 +35,6 @@ import org.wso2.lsp4intellij.editor.EditorEventManagerBase;
 import org.wso2.lsp4intellij.utils.DocumentUtils;
 import org.wso2.lsp4intellij.utils.FileUtils;
 
-import java.util.ArrayList;
 import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.List;
@@ -141,36 +137,24 @@ public class LSPAnnotator extends ExternalAnnotator<Object, Object> {
         });
     }
 
-    @Nullable
-    protected Annotation createAnnotation(Editor editor, AnnotationHolder holder, Diagnostic diagnostic) {
+    protected void createAnnotation(Editor editor, AnnotationHolder holder, Diagnostic diagnostic) {
         final int start = DocumentUtils.LSPPosToOffset(editor, diagnostic.getRange().getStart());
         final int end = DocumentUtils.LSPPosToOffset(editor, diagnostic.getRange().getEnd());
-        if (start >= end) {
-            return null;
-        }
         final TextRange range = new TextRange(start, end);
-
-        return holder.newAnnotation(lspToIntellijAnnotationsMap.get(diagnostic.getSeverity()), diagnostic.getMessage())
-                .range(range)
-                .createAnnotation();
+        AnnotationBuilder annotationBuilder = holder.newAnnotation(
+                lspToIntellijAnnotationsMap.get(diagnostic.getSeverity()),
+                diagnostic.getMessage()
+        );
+        if (diagnostic.getTags() != null && diagnostic.getTags().contains(DiagnosticTag.Deprecated)) {
+            annotationBuilder = annotationBuilder.highlightType(ProblemHighlightType.LIKE_DEPRECATED);
+        }
+        annotationBuilder.range(range).create();
     }
 
     private void createAnnotations(AnnotationHolder holder, EditorEventManager eventManager) {
         final List<Diagnostic> diagnostics = eventManager.getDiagnostics();
         final Editor editor = eventManager.editor;
-
-        List<Annotation> annotations = new ArrayList<>();
-        diagnostics.forEach(d -> {
-            Annotation annotation = createAnnotation(editor, holder, d);
-            if (annotation != null) {
-                if (d.getTags() != null && d.getTags().contains(DiagnosticTag.Deprecated)) {
-                    annotation.setHighlightType(ProblemHighlightType.LIKE_DEPRECATED);
-                }
-                annotations.add(annotation);
-            }
-        });
-
-        eventManager.setAnnotations(annotations);
+        diagnostics.forEach(d -> createAnnotation(editor, holder, d));
         eventManager.setAnonHolder(holder);
     }
 }

@@ -24,7 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class Timeout {
 
-    private static Map<Timeouts, Integer> timeouts = new ConcurrentHashMap<>();
+    private static final Map<Timeouts, Integer> timeouts = new ConcurrentHashMap<>();
 
     static {
         Arrays.stream(Timeouts.values()).forEach(t -> timeouts.put(t, t.getDefaultTimeout()));
