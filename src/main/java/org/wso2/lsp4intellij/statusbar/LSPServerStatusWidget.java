@@ -143,10 +143,15 @@ public class LSPServerStatusWidget implements StatusBarWidget {
         @Override
         public Consumer<MouseEvent> getClickConsumer() {
             return (MouseEvent t) -> {
+                LanguageServerWrapper wrapper = LanguageServerWrapper.forProject(project);
+                if (wrapper == null) {
+                    return;
+                }
+
                 JBPopupFactory.ActionSelectionAid mnemonics = JBPopupFactory.ActionSelectionAid.MNEMONICS;
                 Component component = t.getComponent();
                 List<AnAction> actions = new ArrayList<>();
-                if (LanguageServerWrapper.forProject(project).getStatus() == ServerStatus.INITIALIZED) {
+                if (wrapper.getStatus() == ServerStatus.INITIALIZED) {
                     actions.add(new ShowConnectedFiles());
                 }
                 actions.add(new ShowTimeouts());
