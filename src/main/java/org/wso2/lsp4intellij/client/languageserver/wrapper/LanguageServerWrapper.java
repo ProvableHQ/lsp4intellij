@@ -651,10 +651,6 @@ public class LanguageServerWrapper {
                 }
             }
         }
-
-        if (connectedEditors.isEmpty()) {
-            stop(true);
-        }
     }
 
     /**
@@ -687,9 +683,6 @@ public class LanguageServerWrapper {
             }
             urisUnderLspControl.remove(uri);
             uriToLanguageServerWrapper.remove(new ImmutablePair<>(sanitizeURI(uri), sanitizeURI(projectUri)));
-        }
-        if (connectedEditors.isEmpty()) {
-            stop(true);
         }
     }
 
