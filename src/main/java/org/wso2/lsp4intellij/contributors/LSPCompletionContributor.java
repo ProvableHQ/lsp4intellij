@@ -52,7 +52,7 @@ class LSPCompletionContributor extends CompletionContributor {
                         if (manager != null) {
                             List<LookupElement> list = manager.completion(serverPos);
                             if (list.size() > 0) {
-                                result.addAllElements(manager.completion(serverPos));
+                                result.addAllElements(list);
                                 result.stopHere();
                             }
                         }
