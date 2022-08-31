@@ -16,6 +16,7 @@
 package org.wso2.lsp4intellij.client.connection;
 
 import com.intellij.openapi.diagnostic.Logger;
+import com.intellij.util.EnvironmentUtil;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -25,6 +26,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -74,6 +76,8 @@ public class ProcessStreamConnectionProvider implements StreamConnectionProvider
         } else {
             commands.forEach(c -> c = c.replace("'", ""));
             ProcessBuilder builder = new ProcessBuilder(commands);
+            Map<String, String> env = builder.environment();
+            env.putAll(EnvironmentUtil.getEnvironmentMap());
             builder.directory(new File(workingDir));
             builder.redirectError(ProcessBuilder.Redirect.INHERIT);
             return builder;
