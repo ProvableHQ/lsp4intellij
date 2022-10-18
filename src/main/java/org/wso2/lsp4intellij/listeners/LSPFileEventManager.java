@@ -43,7 +43,7 @@ import java.util.stream.Collectors;
 
 import static org.wso2.lsp4intellij.utils.FileUtils.searchFiles;
 
-class LSPFileEventManager {
+public class LSPFileEventManager {
 
     private static final Logger LOG = Logger.getInstance(LSPFileEventManager.class);
 

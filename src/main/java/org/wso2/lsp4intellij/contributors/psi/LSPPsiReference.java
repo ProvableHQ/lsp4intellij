@@ -15,10 +15,12 @@
  */
 package org.wso2.lsp4intellij.contributors.psi;
 
+import com.intellij.codeInsight.lookup.LookupElement;
 import com.intellij.openapi.util.TextRange;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiPolyVariantReference;
 import com.intellij.psi.PsiReference;
+import com.intellij.util.IncorrectOperationException;
 
 /**
  * A simple PsiReference for LSP

@@ -38,6 +38,7 @@ import org.wso2.lsp4intellij.utils.FileUtils;
 import java.util.ConcurrentModificationException;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Objects;
 
 public class LSPAnnotator extends ExternalAnnotator<Object, Object> {
 
@@ -61,7 +62,7 @@ public class LSPAnnotator extends ExternalAnnotator<Object, Object> {
         try {
             VirtualFile virtualFile = file.getVirtualFile();
 
-            // If the file is not supported, we skips the annotation by returning null.
+            // If the file is not supported, we skip the annotation by returning null.
             if (!FileUtils.isFileSupported(virtualFile) || !IntellijLanguageClient.isExtensionSupported(virtualFile)) {
                 return null;
             }
@@ -100,7 +101,7 @@ public class LSPAnnotator extends ExternalAnnotator<Object, Object> {
             // TODO annotations are applied to a file / document not to an editor. so store them by file and not by editor..
             EditorEventManager eventManager = EditorEventManagerBase.forUri(uri);
 
-            if (eventManager.isCodeActionSyncRequired()) {
+            if (Objects.requireNonNull(eventManager).isCodeActionSyncRequired()) {
                 try {
                     updateAnnotations(holder, eventManager);
                 } catch (ConcurrentModificationException e) {
@@ -128,12 +129,14 @@ public class LSPAnnotator extends ExternalAnnotator<Object, Object> {
             return;
         }
         annotations.forEach(annotation -> {
-            Annotation anon = holder.newAnnotation(annotation.getSeverity(), annotation.getMessage()).createAnnotation();
+            AnnotationBuilder builder = holder.newAnnotation(annotation.getSeverity(), annotation.getMessage());
 
-            if (annotation.getQuickFixes() == null || annotation.getQuickFixes().isEmpty()) {
-                return;
+            if (annotation.getQuickFixes() != null && !annotation.getQuickFixes().isEmpty()) {
+                annotation.getQuickFixes().forEach(quickFixInfo -> builder.withFix(quickFixInfo.quickFix).create());
+                return ;
             }
-            annotation.getQuickFixes().forEach(quickFixInfo -> anon.registerFix(quickFixInfo.quickFix));
+
+            builder.create();
         });
     }
 
