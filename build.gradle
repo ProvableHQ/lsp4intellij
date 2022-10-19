@@ -1,9 +1,8 @@
 plugins {
-    id "jacoco"
+    id "java"
     id "org.jetbrains.intellij" version "1.9.0"
     id "com.github.gradle-git-version-calculator" version "1.1.0"
     id "com.gradle.plugin-publish" version "1.0.0"
-    id "signing"
     id "maven-publish"
 }
 
@@ -13,7 +12,7 @@ repositories {
 
 tasks {
     runPluginVerifier {
-        ideVersions = ["IC-2022.2"]
+        ideVersions.set(["IU-2022.1"])
     }
 }
 
@@ -21,19 +20,20 @@ group = "org.wso2.lsp4intellij"
 version = gitVersionCalculator.calculateVersion("v")
 
 intellij {
-    version = "2022.2"
-    updateSinceUntilBuild = false
-    plugins = ['com.intellij.java']
+    version.set("2022.1.1")
+    type.set("IU") // Target IDE Platform
+    plugins.set([])
+    updateSinceUntilBuild.set(false)
 }
 
 dependencies {
     implementation group: 'org.eclipse.lsp4j', name: 'org.eclipse.lsp4j', version: '0.12.0'
     implementation 'com.vladsch.flexmark:flexmark:0.64.0'
-    implementation group: 'org.apache.commons', name: 'commons-lang3', version: '3.12.0'
-    testImplementation group: 'junit', name: 'junit', version: '4.13.2'
-    testImplementation group: 'org.mockito', name: 'mockito-core', version: '3.9.0'
-    testImplementation group: 'org.powermock', name: 'powermock-api-mockito2', version: '2.0.9'
-    testImplementation group: 'org.powermock', name: 'powermock-module-junit4', version: '2.0.9'
+    implementation 'org.apache.commons:commons-lang3:3.12.0'
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.mockito:mockito-core:3.9.0'
+    testImplementation 'org.powermock:powermock-api-mockito2:2.0.9'
+    testImplementation 'org.powermock:powermock-module-junit4:2.0.9'
 }
 
 sourceSets {
@@ -44,19 +44,8 @@ sourceSets {
     }
 }
 
-sourceCompatibility = 17
-targetCompatibility = 17
-
-check {
-    dependsOn(tasks.jacocoTestReport)
-}
-
-jacocoTestReport {
-    reports {
-        xml.enabled = true
-        xml.destination = new File("$buildDir/reports/jacoco/test/jacoco.xml")
-    }
-}
+sourceCompatibility = 11
+targetCompatibility = 11
 
 publishing {
     publications {
@@ -64,9 +53,4 @@ publishing {
             from components.java
         }
     }
-}
-
-signing {
-    setRequired false
-    sign publishing.publications.maven
 }
