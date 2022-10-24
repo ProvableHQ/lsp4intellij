@@ -72,7 +72,7 @@ public class LSPFileEventManager {
      *
      * @param file The file
      */
-    static void fileChanged(VirtualFile file) {
+    static public void fileChanged(VirtualFile file) {
 
         if (!FileUtils.isFileSupported(file)) {
             return;
