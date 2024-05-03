@@ -16,6 +16,7 @@
 package org.wso2.lsp4intellij.client.languageserver.wrapper;
 
 import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer;
+import com.intellij.openapi.application.ApplicationInfo;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.fileEditor.FileEditor;
@@ -31,7 +32,40 @@ import com.intellij.remoteServer.util.CloudNotifier;
 import com.intellij.util.PlatformIcons;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
-import org.eclipse.lsp4j.*;
+import org.eclipse.lsp4j.ClientCapabilities;
+import org.eclipse.lsp4j.ClientInfo;
+import org.eclipse.lsp4j.CodeActionCapabilities;
+import org.eclipse.lsp4j.CodeActionKindCapabilities;
+import org.eclipse.lsp4j.CodeActionLiteralSupportCapabilities;
+import org.eclipse.lsp4j.CompletionCapabilities;
+import org.eclipse.lsp4j.CompletionItemCapabilities;
+import org.eclipse.lsp4j.DefinitionCapabilities;
+import org.eclipse.lsp4j.DidChangeWatchedFilesCapabilities;
+import org.eclipse.lsp4j.DocumentHighlightCapabilities;
+import org.eclipse.lsp4j.ExecuteCommandCapabilities;
+import org.eclipse.lsp4j.FoldingRangeCapabilities;
+import org.eclipse.lsp4j.FoldingRangeKind;
+import org.eclipse.lsp4j.FoldingRangeKindSupportCapabilities;
+import org.eclipse.lsp4j.FoldingRangeSupportCapabilities;
+import org.eclipse.lsp4j.FormattingCapabilities;
+import org.eclipse.lsp4j.HoverCapabilities;
+import org.eclipse.lsp4j.InitializeParams;
+import org.eclipse.lsp4j.InitializeResult;
+import org.eclipse.lsp4j.InitializedParams;
+import org.eclipse.lsp4j.OnTypeFormattingCapabilities;
+import org.eclipse.lsp4j.RangeFormattingCapabilities;
+import org.eclipse.lsp4j.ReferencesCapabilities;
+import org.eclipse.lsp4j.RenameCapabilities;
+import org.eclipse.lsp4j.ServerCapabilities;
+import org.eclipse.lsp4j.SignatureHelpCapabilities;
+import org.eclipse.lsp4j.SymbolCapabilities;
+import org.eclipse.lsp4j.SynchronizationCapabilities;
+import org.eclipse.lsp4j.TextDocumentClientCapabilities;
+import org.eclipse.lsp4j.TextDocumentSyncKind;
+import org.eclipse.lsp4j.TextDocumentSyncOptions;
+import org.eclipse.lsp4j.WorkspaceClientCapabilities;
+import org.eclipse.lsp4j.WorkspaceEditCapabilities;
+import org.eclipse.lsp4j.WorkspaceFolder;
 import org.eclipse.lsp4j.jsonrpc.Launcher;
 import org.eclipse.lsp4j.jsonrpc.ResponseErrorException;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
@@ -50,7 +84,6 @@ import org.wso2.lsp4intellij.client.languageserver.ServerStatus;
 import org.wso2.lsp4intellij.client.languageserver.requestmanager.DefaultRequestManager;
 import org.wso2.lsp4intellij.client.languageserver.requestmanager.RequestManager;
 import org.wso2.lsp4intellij.client.languageserver.serverdefinition.LanguageServerDefinition;
-import org.wso2.lsp4intellij.editor.DocumentEventManager;
 import org.wso2.lsp4intellij.editor.EditorEventManager;
 import org.wso2.lsp4intellij.editor.EditorEventManagerBase;
 import org.wso2.lsp4intellij.extensions.LSPExtensionManager;
@@ -61,7 +94,6 @@ import org.wso2.lsp4intellij.listeners.LSPCaretListenerImpl;
 import org.wso2.lsp4intellij.requests.Timeouts;
 import org.wso2.lsp4intellij.statusbar.LSPServerStatusWidget;
 import org.wso2.lsp4intellij.statusbar.LSPServerStatusWidgetFactory;
-import org.wso2.lsp4intellij.utils.ApplicationUtils;
 import org.wso2.lsp4intellij.utils.FileUtils;
 import org.wso2.lsp4intellij.utils.LSPException;
 
@@ -70,8 +102,21 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import static org.wso2.lsp4intellij.client.languageserver.ServerStatus.*;
 import static org.wso2.lsp4intellij.requests.Timeout.getTimeout;
@@ -207,7 +252,7 @@ public class LanguageServerWrapper {
     }
 
     public void notifyResult(Timeouts timeouts, boolean success) {
-        getWidget().notifyResult(timeouts, success);
+        getWidget().ifPresent(widget -> widget.notifyResult(timeouts, success));
     }
 
     public void notifySuccess(Timeouts timeouts) {
@@ -403,7 +448,7 @@ public class LanguageServerWrapper {
         } catch (Exception e) {
             // most likely closed externally.
             notifyFailure(Timeouts.SHUTDOWN);
-            LOG.warn("exception occured while trying to shut down", e);
+            LOG.warn("exception occurred while trying to shut down", e);
         } finally {
             if (launcherFuture != null) {
                 launcherFuture.cancel(true);
@@ -415,10 +460,8 @@ public class LanguageServerWrapper {
                 disconnect(ed);
             }
 
-            ApplicationUtils.restartPool();
             // sadly this whole editor closing stuff runs asynchronously, so we cannot be sure the state is really clean here...
             // therefore clear the mapping from here as it should be empty by now.
-            DocumentEventManager.clearState();
             uriToEditorManagers.clear();
             urisUnderLspControl.clear();
             launcherFuture = null;
@@ -501,7 +544,7 @@ public class LanguageServerWrapper {
                     setStatus(INITIALIZED);
                     return res;
                 });
-            } catch (LSPException | IOException e) {
+            } catch (LSPException | IOException | URISyntaxException e) {
                 LOG.warn(e);
                 invokeLater(() ->
                         notifier.showMessage(String.format("Can't start server due to %s", e.getMessage()),
@@ -511,22 +554,26 @@ public class LanguageServerWrapper {
         }
     }
 
-    private InitializeParams getInitParams() {
+    private InitializeParams getInitParams() throws URISyntaxException {
         InitializeParams initParams = new InitializeParams();
-        initParams.setRootUri(FileUtils.pathToUri(projectRootPath));
-        //TODO update capabilities when implemented
+        String projectRootUri = FileUtils.pathToUri(projectRootPath);
+        WorkspaceFolder workspaceFolder = new WorkspaceFolder(projectRootUri, this.project.getName());
+        initParams.setWorkspaceFolders(Collections.singletonList(workspaceFolder));
+
+        // workspace capabilities
         WorkspaceClientCapabilities workspaceClientCapabilities = new WorkspaceClientCapabilities();
         workspaceClientCapabilities.setApplyEdit(true);
         workspaceClientCapabilities.setDidChangeWatchedFiles(new DidChangeWatchedFilesCapabilities());
         workspaceClientCapabilities.setExecuteCommand(new ExecuteCommandCapabilities());
         workspaceClientCapabilities.setWorkspaceEdit(new WorkspaceEditCapabilities());
         workspaceClientCapabilities.setSymbol(new SymbolCapabilities());
-        workspaceClientCapabilities.setWorkspaceFolders(false);
+        workspaceClientCapabilities.setWorkspaceFolders(true);
         workspaceClientCapabilities.setConfiguration(false);
 
+        // text document capabilities
         TextDocumentClientCapabilities textDocumentClientCapabilities = new TextDocumentClientCapabilities();
         textDocumentClientCapabilities.setCodeAction(new CodeActionCapabilities());
-        textDocumentClientCapabilities.getCodeAction().setCodeActionLiteralSupport(new CodeActionLiteralSupportCapabilities());
+        textDocumentClientCapabilities.getCodeAction().setCodeActionLiteralSupport(new CodeActionLiteralSupportCapabilities(new CodeActionKindCapabilities()));
         textDocumentClientCapabilities.setCompletion(new CompletionCapabilities(new CompletionItemCapabilities(true)));
         textDocumentClientCapabilities.setDefinition(new DefinitionCapabilities());
         textDocumentClientCapabilities.setDocumentHighlight(new DocumentHighlightCapabilities());
@@ -538,11 +585,20 @@ public class LanguageServerWrapper {
         textDocumentClientCapabilities.setRename(new RenameCapabilities());
         textDocumentClientCapabilities.setSignatureHelp(new SignatureHelpCapabilities());
         textDocumentClientCapabilities.setSynchronization(new SynchronizationCapabilities(true, true, true));
+
+        FoldingRangeCapabilities foldingRangeCapabilities = new FoldingRangeCapabilities();
+        foldingRangeCapabilities.setFoldingRangeKind(new FoldingRangeKindSupportCapabilities(List.of(FoldingRangeKind.Comment, FoldingRangeKind.Imports, FoldingRangeKind.Region)));
+        foldingRangeCapabilities.setFoldingRange(new FoldingRangeSupportCapabilities(true));
+        foldingRangeCapabilities.setLineFoldingOnly(false);
+        textDocumentClientCapabilities.setFoldingRange(foldingRangeCapabilities);
+
         initParams.setCapabilities(
                 new ClientCapabilities(workspaceClientCapabilities, textDocumentClientCapabilities, null));
-        initParams.setInitializationOptions(
-                serverDefinition.getInitializationOptions(URI.create(initParams.getRootUri())));
+        initParams.setClientInfo(new ClientInfo(ApplicationInfo.getInstance().getVersionName(), ApplicationInfo.getInstance().getFullVersion()));
 
+        // custom initialization options and initialize params provided by users
+        initParams.setInitializationOptions(serverDefinition.getInitializationOptions(URI.create(initParams.getWorkspaceFolders().get(0).getUri())));
+        serverDefinition.customizeInitializeParams(initParams);
         return initParams;
     }
 
@@ -566,8 +622,7 @@ public class LanguageServerWrapper {
 
     private void setStatus(ServerStatus status) {
         this.status = status;
-        LSPServerStatusWidget widget = getWidget();
-        widget.setStatus(status);
+        getWidget().ifPresent(widget -> widget.setStatus(status));
     }
 
     public void crashed(Exception e) {
@@ -624,7 +679,7 @@ public class LanguageServerWrapper {
     }
 
     public void removeWidget() {
-        getWidget().dispose();
+        getWidget().ifPresent(LSPServerStatusWidget::dispose);
     }
 
     /**
@@ -723,12 +778,12 @@ public class LanguageServerWrapper {
         });
     }
 
-    private LSPServerStatusWidget getWidget() {
+    private Optional<LSPServerStatusWidget> getWidget() {
         LSPServerStatusWidgetFactory factory = ((LSPServerStatusWidgetFactory) project.getService(StatusBarWidgetsManager.class).findWidgetFactory("LSP"));
         if (factory != null) {
-            return factory.getWidget(project);
+            return Optional.of(factory.getWidget(project));
         } else {
-            return null;
+            return Optional.empty();
         }
     }
 

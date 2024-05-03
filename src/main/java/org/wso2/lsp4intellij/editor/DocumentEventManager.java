@@ -21,25 +21,37 @@ import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.editor.event.DocumentEvent;
 import com.intellij.openapi.editor.event.DocumentListener;
 import com.intellij.openapi.fileEditor.FileDocumentManager;
+import com.intellij.openapi.util.io.FileUtilRt;
 import com.intellij.openapi.util.text.StringUtil;
-import org.eclipse.lsp4j.*;
+import org.eclipse.lsp4j.DidChangeTextDocumentParams;
+import org.eclipse.lsp4j.DidCloseTextDocumentParams;
+import org.eclipse.lsp4j.DidOpenTextDocumentParams;
+import org.eclipse.lsp4j.Position;
+import org.eclipse.lsp4j.Range;
+import org.eclipse.lsp4j.TextDocumentContentChangeEvent;
+import org.eclipse.lsp4j.TextDocumentIdentifier;
+import org.eclipse.lsp4j.TextDocumentItem;
+import org.eclipse.lsp4j.TextDocumentSyncKind;
+import org.eclipse.lsp4j.VersionedTextDocumentIdentifier;
 import org.wso2.lsp4intellij.client.languageserver.wrapper.LanguageServerWrapper;
 import org.wso2.lsp4intellij.utils.ApplicationUtils;
 import org.wso2.lsp4intellij.utils.DocumentUtils;
 import org.wso2.lsp4intellij.utils.FileUtils;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 
 public class DocumentEventManager {
-    private static final Map<String, DocumentEventManager> uriToDocumentEventManager = new HashMap<>();
     private final Document document;
     private final DocumentListener documentListener;
     private final TextDocumentSyncKind syncKind;
     private final LanguageServerWrapper wrapper;
     private final TextDocumentIdentifier identifier;
-    private final Set<Document> openDocuments = new HashSet<>();
-    protected Logger LOG = Logger.getInstance(EditorEventManager.class);
     private int version = -1;
+    protected Logger LOG = Logger.getInstance(DocumentEventManager.class);
+
+    private final Set<Document> openDocuments = new HashSet<>();
 
     DocumentEventManager(Document document, DocumentListener documentListener, TextDocumentSyncKind syncKind, LanguageServerWrapper wrapper) {
         this.document = document;
@@ -47,22 +59,6 @@ public class DocumentEventManager {
         this.syncKind = syncKind;
         this.wrapper = wrapper;
         this.identifier = new TextDocumentIdentifier(FileUtils.documentToUri(document));
-    }
-
-    public static void clearState() {
-        uriToDocumentEventManager.clear();
-    }
-
-    public static DocumentEventManager getOrCreateDocumentManager(Document document, DocumentListener listener, TextDocumentSyncKind syncKind, LanguageServerWrapper wrapper) {
-        DocumentEventManager manager = uriToDocumentEventManager.get(FileUtils.documentToUri(document));
-        if (manager != null) {
-            return manager;
-        }
-
-        manager = new DocumentEventManager(document, listener, syncKind, wrapper);
-
-        uriToDocumentEventManager.put(FileUtils.documentToUri(document), manager);
-        return manager;
     }
 
     public void removeListeners() {
@@ -91,12 +87,8 @@ public class DocumentEventManager {
             CharSequence newText = event.getNewFragment();
             int offset = event.getOffset();
             int newTextLength = event.getNewLength();
-            Set<EditorEventManager> managersForUri = EditorEventManagerBase.managersForUri(FileUtils.documentToUri(document));
-            if (managersForUri == null || managersForUri.isEmpty()) {
-                LOG.warn("no manager associated with uri");
-                return;
-            }
-            EditorEventManager editorEventManager = EditorEventManagerBase.managersForUri(FileUtils.documentToUri(document)).iterator().next();
+
+            EditorEventManager editorEventManager = EditorEventManagerBase.forUri(FileUtils.documentToUri(document));
             if (editorEventManager == null) {
                 LOG.warn("no editor associated with document");
                 return;
@@ -137,7 +129,7 @@ public class DocumentEventManager {
             LOG.warn("trying to send open notification for document which was already opened!");
         } else {
             openDocuments.add(document);
-            final String extension = FileDocumentManager.getInstance().getFile(document).getExtension();
+            final String extension = FileUtilRt.getExtension(FileDocumentManager.getInstance().getFile(document).getName());
             wrapper.getRequestManager().didOpen(new DidOpenTextDocumentParams(new TextDocumentItem(identifier.getUri(),
                     wrapper.serverDefinition.languageIdFor(extension),
                     ++version,

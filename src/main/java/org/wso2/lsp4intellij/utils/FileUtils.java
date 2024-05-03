@@ -25,6 +25,7 @@ import com.intellij.openapi.fileEditor.TextEditor;
 import com.intellij.openapi.fileTypes.FileType;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.project.ProjectManager;
+import com.intellij.openapi.util.io.FileUtilRt;
 import com.intellij.openapi.vfs.LocalFileSystem;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiDocumentManager;
@@ -40,10 +41,8 @@ import org.wso2.lsp4intellij.IntellijLanguageClient;
 import org.wso2.lsp4intellij.extensions.LSPExtensionManager;
 
 import java.io.File;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -197,12 +196,7 @@ public class FileUtils {
      * @return the URI
      */
     public static String VFSToURI(VirtualFile file) {
-        try {
-            return sanitizeURI(new URL(file.getUrl().replace(" ", SPACE_ENCODED)).toURI().toString());
-        } catch (MalformedURLException | URISyntaxException e) {
-            LOG.warn(e);
-            return null;
-        }
+        return file == null? null : pathToUri(file.getPath());
     }
 
     /**
@@ -285,7 +279,7 @@ public class FileUtils {
      * @return The uri
      */
     public static String pathToUri(@Nullable String path) {
-        return path != null ? sanitizeURI(new File(path.replace(" ", SPACE_ENCODED)).toURI().toString()) : null;
+        return path != null ? sanitizeURI(new File(path).toURI().toString()) : null;
     }
 
     public static String projectToUri(Project project) {
@@ -346,8 +340,10 @@ public class FileUtils {
                 isFileContentSupported(editor);
     }
 
-    // Always returns true unless the user has registered filtering to validate file content via LS protocol extension
-    // manager implementation.
+    /**
+     * Always returns true unless the user has registered filtering to validate file content via LS protocol extension
+     * manager implementation.
+     */
     private static boolean isFileContentSupported(Editor editor) {
         return computableReadAction(() -> {
             if (editor.getProject() == null) {
@@ -357,7 +353,7 @@ public class FileUtils {
             if (file == null) {
                 return true;
             }
-            LSPExtensionManager lspExtManager = IntellijLanguageClient.getExtensionManagerFor(file.getVirtualFile().getExtension());
+            LSPExtensionManager lspExtManager = IntellijLanguageClient.getExtensionManagerFor(FileUtilRt.getExtension(file.getName()));
             if (lspExtManager == null) {
                 return true;
             }

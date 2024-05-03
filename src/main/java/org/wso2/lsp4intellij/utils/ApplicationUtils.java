@@ -19,16 +19,13 @@ import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.project.NoAccessDuringPsiEvents;
 import com.intellij.openapi.util.Computable;
 import com.intellij.openapi.util.Condition;
-import org.wso2.lsp4intellij.IntellijLanguageClient;
-import org.wso2.lsp4intellij.requests.Timeouts;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 public class ApplicationUtils {
 
-    private static ExecutorService EXECUTOR_SERVICE;
+    private final static ExecutorService EXECUTOR_SERVICE;
 
     static {
         // Single threaded executor is used to simulate a behavior of async sequencial execution.
@@ -49,21 +46,6 @@ public class ApplicationUtils {
 
     static public void pool(Runnable runnable) {
         EXECUTOR_SERVICE.submit(runnable);
-    }
-
-    static public void restartPool() {
-        EXECUTOR_SERVICE.shutdown();
-        try {
-            EXECUTOR_SERVICE.awaitTermination(IntellijLanguageClient.getTimeout(Timeouts.SHUTDOWN), TimeUnit.MILLISECONDS);
-        } catch (InterruptedException ignored) {
-        }
-        EXECUTOR_SERVICE = Executors.newSingleThreadExecutor();
-        Runtime.getRuntime().addShutdownHook(new Thread() {
-            @Override
-            public void run() {
-                EXECUTOR_SERVICE.shutdownNow();
-            }
-        });
     }
 
     static public <T> T computableReadAction(Computable<T> computable) {

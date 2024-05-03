@@ -57,12 +57,12 @@ import static org.wso2.lsp4intellij.utils.FileUtils.reloadEditors;
 
 public class IntellijLanguageClient implements ApplicationComponent, Disposable {
 
-    private static final Map<Pair<String, String>, LanguageServerWrapper> extToLanguageWrapper = new ConcurrentHashMap<>();
-    private static final Predicate<LanguageServerWrapper> RUNNING = (s) -> s.getStatus() != ServerStatus.STOPPED;
     private static final Logger LOG = Logger.getInstance(IntellijLanguageClient.class);
+    private static final Map<Pair<String, String>, LanguageServerWrapper> extToLanguageWrapper = new ConcurrentHashMap<>();
+    private static final Map<String, LSPExtensionManager> extToExtManager = new ConcurrentHashMap<>();
+    private static final Predicate<LanguageServerWrapper> RUNNING = (s) -> s.getStatus() != ServerStatus.STOPPED;
     private static final Map<String, Set<LanguageServerWrapper>> projectToLanguageWrappers = new ConcurrentHashMap<>();
     private static final Map<Pair<String, String>, LanguageServerDefinition> extToServerDefinition = new ConcurrentHashMap<>();
-    private static final Map<String, LSPExtensionManager> extToExtManager = new ConcurrentHashMap<>();
 
     /**
      * Adds a new server definition, attached to the given file extension.
@@ -112,7 +112,7 @@ public class IntellijLanguageClient implements ApplicationComponent, Disposable 
     /**
      * @return All instantiated ServerWrappers
      */
-    public static Set<LanguageServerWrapper> getAllServerWrappersFor(String projectUri) {
+    public static @NotNull Set<LanguageServerWrapper> getAllServerWrappersFor(String projectUri) {
         Set<LanguageServerWrapper> allWrappers = new HashSet<>();
         extToLanguageWrapper.forEach((stringStringPair, languageServerWrapper) -> {
             if (FileUtils.projectToUri(languageServerWrapper.getProject()).equals(projectUri)) {
@@ -123,9 +123,9 @@ public class IntellijLanguageClient implements ApplicationComponent, Disposable 
     }
 
     /**
-     * @return All registered LSP protocol extension managers.
+     * @return All registered LSP protocol extension managers for the given file extension.
      */
-    public static LSPExtensionManager getExtensionManagerFor(String fileExt) {
+    public static @Nullable LSPExtensionManager getExtensionManagerFor(String fileExt) {
         if (extToExtManager.containsKey(fileExt)) {
             return extToExtManager.get(fileExt);
         }
@@ -305,8 +305,10 @@ public class IntellijLanguageClient implements ApplicationComponent, Disposable 
         if (wrapper.getProject() != null) {
             String[] extensions = wrapper.getServerDefinition().ext.split(LanguageServerDefinition.SPLIT_CHAR);
             for (String ext : extensions) {
-                extToLanguageWrapper.remove(new MutablePair<>(ext, FileUtils.pathToUri(
-                        new File(wrapper.getProjectRootPath()).getAbsolutePath())));
+                MutablePair<String, String> extProjectPair = new MutablePair<>(ext, FileUtils.pathToUri(
+                        new File(wrapper.getProjectRootPath()).getAbsolutePath()));
+                extToLanguageWrapper.remove(extProjectPair);
+                extToServerDefinition.remove(extProjectPair);
             }
         } else {
             LOG.error("No attached projects found for wrapper");

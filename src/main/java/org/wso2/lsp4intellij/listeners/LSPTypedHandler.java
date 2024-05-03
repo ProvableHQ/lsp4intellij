@@ -15,6 +15,7 @@
  */
 package org.wso2.lsp4intellij.listeners;
 
+import com.intellij.codeInsight.AutoPopupController;
 import com.intellij.codeInsight.editorActions.TypedHandlerDelegate;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.project.Project;
@@ -30,7 +31,7 @@ import org.wso2.lsp4intellij.utils.FileUtils;
 public class LSPTypedHandler extends TypedHandlerDelegate {
 
     @Override
-    public Result charTyped(char c, Project project, @NotNull Editor editor, @NotNull PsiFile file) {
+    public @NotNull Result charTyped(char c, @NotNull Project project, @NotNull Editor editor, @NotNull PsiFile file) {
         if (!FileUtils.isFileSupported(file.getVirtualFile())) {
             return Result.CONTINUE;
         }
@@ -43,7 +44,7 @@ public class LSPTypedHandler extends TypedHandlerDelegate {
     }
 
     @Override
-    public Result checkAutoPopup(char charTyped, @NotNull Project project, @NotNull Editor editor, @NotNull PsiFile file) {
+    public @NotNull Result checkAutoPopup(char charTyped, @NotNull Project project, @NotNull Editor editor, @NotNull PsiFile file) {
         if (!FileUtils.isFileSupported(file.getVirtualFile())) {
             return Result.CONTINUE;
         }
@@ -54,6 +55,7 @@ public class LSPTypedHandler extends TypedHandlerDelegate {
         }
         for (String triggerChar : manager.completionTriggers) {
             if (triggerChar != null && triggerChar.length() == 1 && triggerChar.charAt(0) == charTyped) {
+                AutoPopupController.getInstance(project).scheduleAutoPopup(editor);
                 return Result.STOP;
             }
         }

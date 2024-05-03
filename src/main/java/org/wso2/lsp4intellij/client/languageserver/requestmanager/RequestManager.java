@@ -80,9 +80,6 @@ public interface RequestManager extends LanguageClient, TextDocumentService, Wor
     void didChangeWatchedFiles(DidChangeWatchedFilesParams params);
 
     @Override
-    CompletableFuture<List<? extends SymbolInformation>> symbol(WorkspaceSymbolParams params);
-
-    @Override
     CompletableFuture<Object> executeCommand(ExecuteCommandParams params);
 
     // Text Document Service

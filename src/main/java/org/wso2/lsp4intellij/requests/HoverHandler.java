@@ -26,6 +26,7 @@ import org.eclipse.lsp4j.MarkupContent;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.jsonrpc.validation.NonNull;
 
+import java.awt.Font;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -37,7 +38,7 @@ public class HoverHandler {
     private final Logger LOG = Logger.getInstance(HoverHandler.class);
 
     /**
-     * Returns the hover string corresponding to an Hover response
+     * Returns the hover string corresponding to a Hover response
      *
      * @param hover The Hover
      * @return The string response
@@ -46,6 +47,7 @@ public class HoverHandler {
         if (hover == null || hover.getContents() == null) {
             return "";
         }
+        Font font = UIUtil.getLabelFont();
         Either<List<Either<String, MarkedString>>, MarkupContent> hoverContents = hover.getContents();
         if (hoverContents.isLeft()) {
             List<Either<String, MarkedString>> contents = hoverContents.getLeft();
@@ -68,16 +70,19 @@ public class HoverHandler {
                         result.add(renderer.render(parser.parse(string)));
                     }
                 }
-                return "<html><style>p {margin: 0; color: " + (UIUtil.isUnderDarcula() ? "rgb(187,187,187)" : "black") + ";</style>" + String.join("\n\n", result) + "</html>";
+                return "<html>" + UIUtil.getCssFontDeclaration(font) + String.join("\n\n", result) + "</html>";
             } else {
                 return "";
             }
         } else if (hoverContents.isRight()) {
+            String markedContent = hoverContents.getRight().getValue();
+            if (markedContent.isEmpty()) {
+                return "";
+            }
             MutableDataSet options = new MutableDataSet();
             Parser parser = Parser.builder(options).build();
             HtmlRenderer renderer = HtmlRenderer.builder(options).build();
-            String markedContent = hoverContents.getRight().getValue();
-            return "<html>" + renderer.render(parser.parse(markedContent)) + "</html>";
+            return "<html>" + UIUtil.getCssFontDeclaration(font) + renderer.render(parser.parse(markedContent)) + "</html>";
         } else {
             return "";
         }

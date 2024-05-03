@@ -23,61 +23,6 @@ import java.util.List;
  * Object containing some useful methods for the plugin
  */
 public class Utils {
-
-    public static String[] parseArgs(String[] strArr) {
-        List<String> buffer = new ArrayList<>();
-        boolean isSingleQuote = false;
-        boolean isDoubleQuote = false;
-        boolean wasEscaped = false;
-
-        StringBuilder curStr = new StringBuilder();
-        for (String str : strArr) {
-            for (int i = 0; i < str.length(); i++) {
-                switch (str.charAt(i)) {
-                    case '\'':
-                        if (!wasEscaped) {
-                            isSingleQuote = !isSingleQuote;
-                        }
-                        wasEscaped = false;
-                        curStr.append('\'');
-                        break;
-                    case '\"':
-                        if (!wasEscaped) {
-                            isDoubleQuote = !isDoubleQuote;
-                        }
-                        wasEscaped = false;
-                        curStr.append('\"');
-                        break;
-                    case ' ':
-                        if (isSingleQuote || isDoubleQuote) {
-                            curStr.append(" ");
-                        } else {
-                            buffer.add(curStr.toString());
-                            curStr.setLength(0);
-                        }
-                        wasEscaped = false;
-                        break;
-                    case '\\':
-                        wasEscaped = !wasEscaped;
-                        curStr.append('\\');
-                        break;
-                    case 'c':
-                        curStr.append('c');
-                        wasEscaped = false;
-                        break;
-                }
-            }
-
-            if (curStr.length() != 0) {
-                buffer.add(curStr.toString());
-                curStr.setLength(0);
-            }
-        }
-        String[] result = new String[buffer.size()];
-        buffer.toArray(result);
-        return result;
-    }
-
     /**
      * Transforms an array into a string (using mkString, useful for Java)
      *
@@ -104,5 +49,59 @@ public class Utils {
     public List<String> stringToList(String str, String sep) {
         sep = (sep != null) ? sep : System.lineSeparator();
         return new ArrayList<>(Arrays.asList(str.split(sep)));
+    }
+
+    public static String[] parseArgs(String[] strArr) {
+        List<String> buffer = new ArrayList<>();
+        boolean isSingleQuote = false;
+        boolean isDoubleQuote = false;
+        boolean wasEscaped = false;
+
+        StringBuilder curStr = new StringBuilder();
+        for (String str : strArr) {
+            for (int i = 0; i < str.length(); i++) {
+                switch (str.charAt(i)) {
+                case '\'':
+                    if (!wasEscaped) {
+                        isSingleQuote = !isSingleQuote;
+                    }
+                    wasEscaped = false;
+                    curStr.append('\'');
+                    break;
+                case '\"':
+                    if (!wasEscaped) {
+                        isDoubleQuote = !isDoubleQuote;
+                    }
+                    wasEscaped = false;
+                    curStr.append('\"');
+                    break;
+                case ' ':
+                    if (isSingleQuote || isDoubleQuote) {
+                        curStr.append(" ");
+                    } else {
+                        buffer.add(curStr.toString());
+                        curStr.setLength(0);
+                    }
+                    wasEscaped = false;
+                    break;
+                case '\\':
+                    wasEscaped = !wasEscaped;
+                    curStr.append('\\');
+                    break;
+                case 'c':
+                    curStr.append('c');
+                    wasEscaped = false;
+                    break;
+                }
+            }
+
+            if (curStr.length() != 0) {
+                buffer.add(curStr.toString());
+                curStr.setLength(0);
+            }
+        }
+        String[] result = new String[buffer.size()];
+        buffer.toArray(result);
+        return result;
     }
 }

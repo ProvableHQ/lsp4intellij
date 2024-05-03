@@ -18,6 +18,7 @@ package org.wso2.lsp4intellij.listeners;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.event.CaretEvent;
 import com.intellij.openapi.editor.event.CaretListener;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -37,7 +38,7 @@ public class LSPCaretListenerImpl extends LSPListener implements CaretListener {
     }
 
     @Override
-    public void caretPositionChanged(CaretEvent e) {
+    public void caretPositionChanged(@NotNull CaretEvent e) {
         try {
             if (scheduledFuture != null && !scheduledFuture.isCancelled()) {
                 scheduledFuture.cancel(false);

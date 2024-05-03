@@ -25,6 +25,9 @@ see also jetbrains documentation: https://plugins.jetbrains.com/docs/intellij/pl
         <!-- for displaying notifications by lsp -->
         <notificationGroup id="lsp" displayType="STICKY_BALLOON"/>
 
+        <!-- for displaying progress notifications by lsp in the Event Log -->
+        <notificationGroup id="LSPProgressNotification" displayType="NONE" />
+
         <!-- for displaying the statusbar icon -->
         <statusBarWidgetFactory implementation="org.wso2.lsp4intellij.statusbar.LSPServerStatusWidgetFactory"
                                 id="org.wso2.lsp4intellij.statusbar.LSPServerStatusWidgetFactory"
@@ -48,6 +51,9 @@ see also jetbrains documentation: https://plugins.jetbrains.com/docs/intellij/pl
         <!-- needed for renaming -->
         <renameHandler implementation="org.wso2.lsp4intellij.contributors.rename.LSPRenameHandler" id="LSPRenameHandler" order="first"/>
         <renamePsiElementProcessor implementation="org.wso2.lsp4intellij.contributors.rename.LSPRenameProcessor" id="LSPRenameProcessor" order="first"/>
+
+        <!-- needed for folding support -->
+        <lang.foldingBuilder language="YOUR_LANGUAGE_ID" implementationClass="org.wso2.lsp4intellij.contributors.LSPFoldingRangeProvider" id="LSPFoldingRangeProvider" order="first" />
     </extensions>
 
     <actions>

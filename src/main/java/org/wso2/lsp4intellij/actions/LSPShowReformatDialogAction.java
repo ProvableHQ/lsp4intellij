@@ -39,7 +39,7 @@ import org.wso2.lsp4intellij.editor.EditorEventManagerBase;
  * Fallback to the default action if the language is already supported or not supported by any language server
  */
 public class LSPShowReformatDialogAction extends ShowReformatFileDialog implements DumbAware {
-    private final String HELP_ID = "editing.codeReformatting";
+    private String HELP_ID = "editing.codeReformatting";
     private final Logger LOG = Logger.getInstance(LSPShowReformatDialogAction.class);
 
     @Override

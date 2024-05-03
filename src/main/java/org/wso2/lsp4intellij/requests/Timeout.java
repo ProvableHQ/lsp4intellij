@@ -39,6 +39,6 @@ public class Timeout {
     }
 
     public static void setTimeouts(Map<Timeouts, Integer> loaded) {
-        loaded.forEach((t, v) -> timeouts.replace(t, v));
+        loaded.forEach(timeouts::replace);
     }
 }

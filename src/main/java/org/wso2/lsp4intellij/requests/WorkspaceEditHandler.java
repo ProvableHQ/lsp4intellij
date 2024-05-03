@@ -50,6 +50,7 @@ import java.util.stream.Stream;
 
 import static org.wso2.lsp4intellij.utils.ApplicationUtils.invokeLater;
 import static org.wso2.lsp4intellij.utils.ApplicationUtils.writeAction;
+import static org.wso2.lsp4intellij.utils.DocumentUtils.toEither;
 
 /**
  * An Object handling WorkspaceEdits
@@ -125,7 +126,7 @@ public class WorkspaceEditHandler {
                         EditorEventManager manager = EditorEventManagerBase.forUri(uri);
                         if (manager != null) {
                             curProject[0] = manager.editor.getProject();
-                            toApply.add(manager.getEditsRunnable(version, textEdit.getEdits(), newName, true));
+                            toApply.add(manager.getEditsRunnable(version, toEither(textEdit.getEdits()), newName, true));
                         } else {
                             toApply.add(
                                     manageUnopenedEditor(textEdit.getEdits(), uri, version, openedEditors, curProject,
@@ -146,7 +147,7 @@ public class WorkspaceEditHandler {
                     EditorEventManager manager = EditorEventManagerBase.forUri(uri);
                     if (manager != null) {
                         curProject[0] = manager.editor.getProject();
-                        toApply.add(manager.getEditsRunnable(Integer.MAX_VALUE, lChanges, newName, true));
+                        toApply.add(manager.getEditsRunnable(Integer.MAX_VALUE, toEither(lChanges), newName, true));
                     } else {
                         toApply.add(manageUnopenedEditor(lChanges, uri, Integer.MAX_VALUE, openedEditors, curProject,
                                 newName));
@@ -178,9 +179,9 @@ public class WorkspaceEditHandler {
      * @param edits         The text edits
      * @param uri           The uri of the file
      * @param version       The version of the file
-     * @param openedEditors
-     * @param curProject
-     * @param name
+     * @param openedEditors The list of opened editors
+     * @param curProject    The current project
+     * @param name          The name of the edit
      * @return The runnable containing the edits
      */
     private static Runnable manageUnopenedEditor(List<TextEdit> edits, String uri, int version,
@@ -206,7 +207,7 @@ public class WorkspaceEditHandler {
         Runnable runnable = null;
         EditorEventManager manager = EditorEventManagerBase.forEditor(editor);
         if (manager != null) {
-            runnable = manager.getEditsRunnable(version, edits, name, true);
+            runnable = manager.getEditsRunnable(version, toEither(edits), name, true);
         }
         return runnable;
     }

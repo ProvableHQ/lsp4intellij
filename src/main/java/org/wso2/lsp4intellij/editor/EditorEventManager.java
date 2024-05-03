@@ -52,6 +52,7 @@ import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.ui.Hint;
 import com.intellij.util.SmartList;
+import groovy.lang.Tuple3;
 import org.apache.commons.lang3.StringUtils;
 import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.JsonRpcException;
@@ -87,11 +88,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static org.wso2.lsp4intellij.editor.EditorEventManagerBase.*;
 import static org.wso2.lsp4intellij.requests.Timeout.getTimeout;
 import static org.wso2.lsp4intellij.requests.Timeouts.*;
 import static org.wso2.lsp4intellij.utils.ApplicationUtils.*;
+import static org.wso2.lsp4intellij.utils.DocumentUtils.toEither;
 import static org.wso2.lsp4intellij.utils.GUIUtils.createAndShowEditorHint;
 
 /**
@@ -109,8 +112,6 @@ import static org.wso2.lsp4intellij.utils.GUIUtils.createAndShowEditorHint;
 @SuppressWarnings("unchecked")
 public class EditorEventManager {
 
-    public static final String SNIPPET_PLACEHOLDER_REGEX = "(\\$\\{\\d+:?([^{^}]*)}|\\$\\d+)";
-    private static final long CTRL_THRESH = EditorSettingsExternalizable.getInstance().getTooltipsDelay() * 1000000L;
     public final DocumentEventManager documentEventManager;
     private final List<Diagnostic> diagnostics = new ArrayList<>();
     private final Project project;
@@ -134,6 +135,14 @@ public class EditorEventManager {
     private List<Annotation> annotations = new ArrayList<>();
     private volatile boolean diagnosticSyncRequired = true;
     private volatile boolean codeActionSyncRequired = false;
+
+    private static final long CTRL_THRESH = EditorSettingsExternalizable.getInstance().getTooltipsDelay() * 1000000;
+
+    public static final String SNIPPET_PLACEHOLDER_REGEX = "(\\$\\{\\d+:?([^{^}]*)}|\\$\\d+)";
+
+    private List<Tuple3<HighlightSeverity,TextRange,LSPCodeActionFix>> silentAnnotations = new ArrayList<>();
+
+    private boolean annotationsRefreshed = false;
 
     //Todo - Revisit arguments order and add remaining listeners
     public EditorEventManager(Editor editor, DocumentListener documentListener, EditorMouseListener mouseListener,
@@ -165,7 +174,7 @@ public class EditorEventManager {
 
         this.currentHint = null;
 
-        this.documentEventManager = DocumentEventManager.getOrCreateDocumentManager(editor.getDocument(), documentListener, syncKind, wrapper);
+        this.documentEventManager = new DocumentEventManager(editor.getDocument(), documentListener, syncKind, wrapper);
     }
 
     @SuppressWarnings("unused")
@@ -333,13 +342,14 @@ public class EditorEventManager {
             return null;
         }
         try {
-            // for now we only get Location, so we only check the left, but in future we might need to support
-            // right as well which will return LocationLink
             Either<List<? extends Location>, List<? extends LocationLink>> definition =
                     request.get(getTimeout(DEFINITION), TimeUnit.MILLISECONDS);
             wrapper.notifySuccess(Timeouts.DEFINITION);
             if (definition.isLeft() && !definition.getLeft().isEmpty()) {
                 return definition.getLeft().get(0);
+            } else if (definition.isRight() && !definition.getRight().isEmpty()) {
+                var def = definition.getRight().get(0);
+                return new Location(def.getTargetUri(), def.getTargetRange());
             }
         } catch (TimeoutException e) {
             LOG.warn(e);
@@ -620,7 +630,7 @@ public class EditorEventManager {
             }
             request.thenAccept(formatting -> {
                 if (formatting != null) {
-                    invokeLater(() -> applyEdit((List<TextEdit>) formatting, "Reformat document", false));
+                    invokeLater(() -> applyEdit(toEither((List<TextEdit>) formatting), "Reformat document", false));
                 }
             });
         });
@@ -658,7 +668,7 @@ public class EditorEventManager {
                 }
                 invokeLater(() -> {
                     if (!editor.isDisposed()) {
-                        applyEdit((List<TextEdit>) formatting, "Reformat selection", false);
+                        applyEdit(toEither((List<TextEdit>) formatting), "Reformat selection", false);
                     }
                 });
             });
@@ -820,7 +830,9 @@ public class EditorEventManager {
         String insertText = item.getInsertText();
         CompletionItemKind kind = item.getKind();
         String label = item.getLabel();
-        Either<TextEdit, InsertReplaceEdit> textEdit = item.getTextEdit();
+        Either<TextEdit, InsertReplaceEdit> textEditEither = item.getTextEdit();
+        TextEdit textEdit = (textEditEither != null) ? textEditEither.getLeft() : null;
+        InsertReplaceEdit insertReplaceEdit = (textEditEither != null) ? textEditEither.getRight() : null;
         List<TextEdit> addTextEdits = item.getAdditionalTextEdits();
         String presentableText = StringUtils.isNotEmpty(label) ? label : (insertText != null) ? insertText : "";
         String tailText = (detail != null) ? detail : "";
@@ -830,7 +842,9 @@ public class EditorEventManager {
 
         String lookupString = null;
         if (textEdit != null) {
-            lookupString = textEdit.getLeft().getNewText();
+            lookupString = textEdit.getNewText();
+        } else if (insertReplaceEdit != null) {
+            lookupString = insertReplaceEdit.getNewText();
         } else if (StringUtils.isNotEmpty(insertText)) {
             lookupString = insertText;
         } else if (StringUtils.isNotEmpty(label)) {
@@ -880,7 +894,7 @@ public class EditorEventManager {
                 }
 
                 context.commitDocument();
-                applyEdit(Integer.MAX_VALUE, addTextEdits, "Completion : " + label, false, false);
+                applyEdit(Integer.MAX_VALUE, toEither(addTextEdits), "Completion : " + label, false, false);
                 if (command != null) {
                     executeCommands(Collections.singletonList(command));
                 }
@@ -921,9 +935,11 @@ public class EditorEventManager {
             });
             context.commitDocument();
 
-            item.getTextEdit().getLeft().setNewText(getLookupStringWithoutPlaceholders(item, lookupString));
+            if(item.getTextEdit().isLeft()) {
+                item.getTextEdit().getLeft().setNewText(getLookupStringWithoutPlaceholders(item, lookupString));
+            }
 
-            applyEdit(Integer.MAX_VALUE, Collections.singletonList(item.getTextEdit().getLeft()), "text edit", false, true);
+            applyEdit(Integer.MAX_VALUE, Collections.singletonList(item.getTextEdit()), "text edit", false, true);
         } else {
             // client handles insertion, determine a prefix (to allow completions of partially matching items)
             int prefixLength = getCompletionPrefixLength(context.getStartOffset());
@@ -945,20 +961,16 @@ public class EditorEventManager {
 
     @NotNull
     public String getCompletionPrefix(Editor editor, int offset) {
-        List<String> delimiters = new ArrayList<>(this.completionTriggers);
-        // add whitespace as delimiter, otherwise forced completion does not work
-        delimiters.addAll(Arrays.asList(" \t\n\r".split("")));
-
-        StringBuilder s = new StringBuilder();
+        String delimiterString = String.join("", this.completionTriggers) + " \t\n\r";
         String documentText = editor.getDocument().getText();
-        for (int i = 0; i < offset; i++) {
-            char singleLetter = documentText.charAt(offset - i - 1);
-            if (delimiters.contains(String.valueOf(singleLetter))) {
-                return s.reverse().toString();
+        int lastIndex = -1;
+        for (char delimiter : delimiterString.toCharArray()) {
+            int index = documentText.substring(0, offset).lastIndexOf(delimiter);
+            if (index > lastIndex) {
+                lastIndex = index;
             }
-            s.append(singleLetter);
         }
-        return "";
+        return lastIndex >= 0 ? documentText.substring(lastIndex + 1, offset) : documentText.substring(0, offset);
     }
 
     @SuppressWarnings("WeakerAccess")
@@ -970,7 +982,9 @@ public class EditorEventManager {
         while (varMatcher.find()) {
             variables.add(new SnippetVariable(varMatcher.group(), varMatcher.start(), varMatcher.end()));
         }
-
+        if (variables.isEmpty()) {
+            return;
+        }
         variables.sort(Comparator.comparingInt(o -> o.startIndex));
         final String[] finalInsertText = {insertText};
         variables.forEach(var -> finalInsertText[0] = finalInsertText[0].replace(var.lspSnippetText, "$"));
@@ -1030,7 +1044,7 @@ public class EditorEventManager {
         }
     }
 
-    boolean applyEdit(List<TextEdit> edits, String name, boolean setCaret) {
+    boolean applyEdit(List<Either<TextEdit, InsertReplaceEdit>> edits, String name, boolean setCaret) {
         return applyEdit(Integer.MAX_VALUE, edits, name, false, setCaret);
     }
 
@@ -1043,7 +1057,7 @@ public class EditorEventManager {
      * @param closeAfter will close the file after edits if set to true
      * @return True if the edits were applied, false otherwise
      */
-    boolean applyEdit(int version, List<TextEdit> edits, String name, boolean closeAfter, boolean setCaret) {
+    boolean applyEdit(int version, List<Either<TextEdit, InsertReplaceEdit>> edits, String name, boolean closeAfter, boolean setCaret) {
         Runnable runnable = getEditsRunnable(version, edits, name, setCaret);
         writeAction(() -> {
             if (runnable != null) {
@@ -1069,7 +1083,7 @@ public class EditorEventManager {
      * @param name    The name of the edit
      * @return The runnable
      */
-    public Runnable getEditsRunnable(int version, List<TextEdit> edits, String name, boolean setCaret) {
+    public Runnable getEditsRunnable(int version, List<Either<TextEdit, InsertReplaceEdit>> edits, String name, boolean setCaret) {
         if (version < this.documentEventManager.getDocumentVersion()) {
             LOG.warn(String.format("Edit version %d is older than current version %d", version, this.documentEventManager.getDocumentVersion()));
             return null;
@@ -1094,13 +1108,27 @@ public class EditorEventManager {
             // since the document is changed.
             List<LSPTextEdit> lspEdits = new ArrayList<>();
             edits.forEach(edit -> {
-                String text = edit.getNewText();
-                Range range = edit.getRange();
+                if(edit.isLeft()) {
+                    String text = edit.getLeft().getNewText();
+                    Range range = edit.getLeft().getRange();
+                    if (range != null) {
+                        int start = DocumentUtils.LSPPosToOffset(editor, range.getStart());
+                        int end = DocumentUtils.LSPPosToOffset(editor, range.getEnd());
+                        lspEdits.add(new LSPTextEdit(text, start, end));
+                    }
+                } else if(edit.isRight()) {
+                    String text = edit.getRight().getNewText();
+                    Range range = edit.getRight().getInsert();
 
-                if (range != null) {
-                    int start = DocumentUtils.LSPPosToOffset(editor, range.getStart());
-                    int end = DocumentUtils.LSPPosToOffset(editor, range.getEnd());
-                    lspEdits.add(new LSPTextEdit(text, start, end));
+                    if (range != null) {
+                        int start = DocumentUtils.LSPPosToOffset(editor, range.getStart());
+                        int end = DocumentUtils.LSPPosToOffset(editor, range.getEnd());
+                        lspEdits.add(new LSPTextEdit(text, start, end));
+                    } else if ((range = edit.getRight().getReplace()) != null) {
+                        int start = DocumentUtils.LSPPosToOffset(editor, range.getStart());
+                        int end = DocumentUtils.LSPPosToOffset(editor, range.getEnd());
+                        lspEdits.add(new LSPTextEdit(text, start, end));
+                    }
                 }
             });
 
@@ -1281,7 +1309,7 @@ public class EditorEventManager {
                         List<TextEdit> edits = future.get(getTimeout(WILLSAVE), TimeUnit.MILLISECONDS);
                         wrapper.notifySuccess(Timeouts.WILLSAVE);
                         if (edits != null) {
-                            invokeLater(() -> applyEdit(edits, "WaitUntil edits", false));
+                            invokeLater(() -> applyEdit(toEither(edits), "WaitUntil edits", false));
                         }
                     } catch (TimeoutException e) {
                         LOG.warn(e);
@@ -1305,7 +1333,7 @@ public class EditorEventManager {
         }
     }
 
-    // Tries to go to definition / show usages based on the element which is
+    /** Tries to go to definition / show usages based on the element which is */
     private void trySourceNavigationAndHover(EditorMouseEvent e) {
         if (editor.isDisposed()) {
             return;
@@ -1400,27 +1428,41 @@ public class EditorEventManager {
                 }
                 if (element.isLeft()) {
                     Command command = element.getLeft();
-                    annotations.forEach(annotation -> {
+                    Annotation annotWithCodeAction = null;
+                    for (Annotation annotation : annotations) {
                         int start = annotation.getStartOffset();
                         int end = annotation.getEndOffset();
                         if (start <= caretPos && end >= caretPos) {
                             annotation.registerFix(new LSPCommandFix(FileUtils.editorToURIString(editor), command),
                                     new TextRange(start, end));
                             codeActionSyncRequired = true;
+                            annotWithCodeAction = annotation;
+                            break;
                         }
-                    });
+                    }
+                    if (annotWithCodeAction != null) {
+                        annotations.remove(annotWithCodeAction);
+                        annotations.add(0, annotWithCodeAction);
+                    }
                 } else if (element.isRight()) {
                     CodeAction codeAction = element.getRight();
                     List<Diagnostic> diagnosticContext = codeAction.getDiagnostics();
-                    annotations.forEach(annotation -> {
+                    Annotation annotWithCodeAction = null;
+                    for (Annotation annotation : annotations) {
                         int start = annotation.getStartOffset();
                         int end = annotation.getEndOffset();
                         if (start <= caretPos && end >= caretPos) {
                             annotation.registerFix(new LSPCodeActionFix(FileUtils.editorToURIString(editor),
                                     codeAction), new TextRange(start, end));
                             codeActionSyncRequired = true;
+                            annotWithCodeAction = annotation;
+                            break;
                         }
-                    });
+                    }
+                    if (annotWithCodeAction != null) {
+                        annotations.remove(annotWithCodeAction);
+                        annotations.add(0, annotWithCodeAction);
+                    }
 
                     // If the code actions does not have a diagnostics context, creates an intention action for
                     // the current line.
@@ -1430,25 +1472,31 @@ public class EditorEventManager {
                         int startOffset = editor.getDocument().getLineStartOffset(line);
                         int endOffset = editor.getDocument().getLineEndOffset(line);
                         TextRange range = new TextRange(startOffset, endOffset);
-
-                        this.anonHolder
-                                .newAnnotation(HighlightSeverity.INFORMATION, codeAction.getTitle())
-                                .range(range)
-                                .withFix(new LSPCodeActionFix(FileUtils.editorToURIString(editor), codeAction))
-                                .create();
-
-                        SmartList<Annotation> asList = (SmartList<Annotation>) this.anonHolder;
-                        this.annotations.add(asList.get(asList.size() - 1));
-
-
-                        diagnosticSyncRequired = true;
+                        boolean found = silentAnnotations.stream()
+                                .anyMatch(silentAnnotation ->
+                                        silentAnnotation.getSecond().getStartOffset() == startOffset &&
+                                        silentAnnotation.getSecond().getEndOffset() == endOffset &&
+                                        silentAnnotation.getThird().getText().equals(codeAction.getTitle())
+                                 );
+                        if (!found) {
+                            Tuple3<HighlightSeverity, TextRange, LSPCodeActionFix> sAnnotation =
+                                    new Tuple3<>(
+                                            HighlightSeverity.INFORMATION,
+                                            range,
+                                            new LSPCodeActionFix(FileUtils.editorToURIString(editor), codeAction)
+                                    );
+                            silentAnnotations.add(sAnnotation);
+                        }
+                        codeActionSyncRequired = true;
                     }
                 }
             });
             // If code actions are updated, forcefully triggers the inspection tool.
             if (codeActionSyncRequired) {
-                updateErrorAnnotations();
+                // double-delay the update to ensure that the code analyzer finishes.
+                invokeLater(this::updateErrorAnnotations);
             }
+            annotationsRefreshed = false;
         });
     }
 
@@ -1466,6 +1514,18 @@ public class EditorEventManager {
             DaemonCodeAnalyzer.getInstance(project).restart(file);
             return null;
         });
+    }
+
+    public List<Tuple3<HighlightSeverity,TextRange,LSPCodeActionFix>> getSilentAnnotations() {
+        return silentAnnotations;
+    }
+
+    public void refreshAnnotations() {
+        if (!annotationsRefreshed) {
+            updateErrorAnnotations();
+            silentAnnotations.clear();
+            annotationsRefreshed = true;
+        }
     }
 
     private static class LSPTextEdit implements Comparable<LSPTextEdit> {

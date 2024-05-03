@@ -28,6 +28,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * A class symbolizing a stream to a process
@@ -74,7 +75,7 @@ public class ProcessStreamConnectionProvider implements StreamConnectionProvider
         if (builder != null) {
             return builder;
         } else {
-            commands.forEach(c -> c = c.replace("'", ""));
+            commands = commands.stream().map(c -> c.replace("'", "")).collect(Collectors.toList());
             ProcessBuilder builder = new ProcessBuilder(commands);
             Map<String, String> env = builder.environment();
             env.putAll(EnvironmentUtil.getEnvironmentMap());
