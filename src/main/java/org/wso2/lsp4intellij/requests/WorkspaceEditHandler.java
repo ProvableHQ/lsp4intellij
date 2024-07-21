@@ -143,7 +143,6 @@ public class WorkspaceEditHandler {
             } else if (changes != null) {
                 changes.forEach((key, lChanges) -> {
                     String uri = FileUtils.sanitizeURI(key);
-
                     EditorEventManager manager = EditorEventManagerBase.forUri(uri);
                     if (manager != null) {
                         curProject[0] = manager.editor.getProject();

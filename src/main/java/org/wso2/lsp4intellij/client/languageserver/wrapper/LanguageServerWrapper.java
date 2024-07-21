@@ -37,6 +37,7 @@ import org.eclipse.lsp4j.ClientInfo;
 import org.eclipse.lsp4j.CodeActionCapabilities;
 import org.eclipse.lsp4j.CodeActionKindCapabilities;
 import org.eclipse.lsp4j.CodeActionLiteralSupportCapabilities;
+import org.eclipse.lsp4j.CodeActionResolveSupportCapabilities;
 import org.eclipse.lsp4j.CompletionCapabilities;
 import org.eclipse.lsp4j.CompletionItemCapabilities;
 import org.eclipse.lsp4j.DefinitionCapabilities;
@@ -154,6 +155,8 @@ public class LanguageServerWrapper {
     private volatile boolean alreadyShownTimeout = false;
     private volatile boolean alreadyShownCrash = false;
     private volatile ServerStatus status = STOPPED;
+
+    private static final List<String> codeActionResolveProperties = new ArrayList<>(List.of("edit"));
 
     public LanguageServerWrapper(@NotNull LanguageServerDefinition serverDefinition, @NotNull Project project) {
         this(serverDefinition, project, null);
@@ -574,6 +577,7 @@ public class LanguageServerWrapper {
         TextDocumentClientCapabilities textDocumentClientCapabilities = new TextDocumentClientCapabilities();
         textDocumentClientCapabilities.setCodeAction(new CodeActionCapabilities());
         textDocumentClientCapabilities.getCodeAction().setCodeActionLiteralSupport(new CodeActionLiteralSupportCapabilities(new CodeActionKindCapabilities()));
+        textDocumentClientCapabilities.getCodeAction().setResolveSupport(new CodeActionResolveSupportCapabilities(codeActionResolveProperties));
         textDocumentClientCapabilities.setCompletion(new CompletionCapabilities(new CompletionItemCapabilities(true)));
         textDocumentClientCapabilities.setDefinition(new DefinitionCapabilities());
         textDocumentClientCapabilities.setDocumentHighlight(new DocumentHighlightCapabilities());
@@ -779,10 +783,14 @@ public class LanguageServerWrapper {
     }
 
     private Optional<LSPServerStatusWidget> getWidget() {
-        LSPServerStatusWidgetFactory factory = ((LSPServerStatusWidgetFactory) project.getService(StatusBarWidgetsManager.class).findWidgetFactory("LSP"));
-        if (factory != null) {
-            return Optional.of(factory.getWidget(project));
-        } else {
+        try {
+            LSPServerStatusWidgetFactory factory = ((LSPServerStatusWidgetFactory) project.getService(StatusBarWidgetsManager.class).findWidgetFactory("LSP"));
+            if (factory != null) {
+                return Optional.of(factory.getWidget(project));
+            } else {
+                return Optional.empty();
+            }
+        } catch (Exception e) {
             return Optional.empty();
         }
     }

@@ -139,7 +139,7 @@ public class LSPServerStatusWidget implements StatusBarWidget {
                 JBPopupFactory.ActionSelectionAid mnemonics = JBPopupFactory.ActionSelectionAid.MNEMONICS;
                 Component component = t.getComponent();
                 List<AnAction> actions = new ArrayList<>();
-                if (wrapper.getStatus() == ServerStatus.INITIALIZED) {
+                if (LanguageServerWrapper.forProject(project)!= null && LanguageServerWrapper.forProject(project).getStatus() == ServerStatus.INITIALIZED) {
                     actions.add(new ShowConnectedFiles());
                 }
                 actions.add(new ShowTimeouts());
@@ -220,7 +220,9 @@ public class LSPServerStatusWidget implements StatusBarWidget {
 
             @Override
             public void actionPerformed(@NotNull AnActionEvent anActionEvent) {
-                LanguageServerWrapper.forProject(project).restart();
+                if (LanguageServerWrapper.forProject(project) != null) {
+                    LanguageServerWrapper.forProject(project).restart();
+                }
             }
         }
     }
